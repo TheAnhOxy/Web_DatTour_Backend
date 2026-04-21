@@ -1,0 +1,140 @@
+services:
+  # --- Databases ---
+  db-user:
+    image: postgres:15
+    container_name: db-user
+    environment:
+      POSTGRES_DB: user_db
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: Theanh123
+    ports: ["5433:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d user_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  db-food:
+    image: postgres:15
+    container_name: db-food
+    environment:
+      POSTGRES_DB: food_db
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: Theanh123
+    ports: ["5434:5432"]
+    volumes:
+      - ./food-service/init-db:/docker-entrypoint-initdb.d/seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d food_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  db-order:
+    image: postgres:15
+    container_name: db-order
+    environment:
+      POSTGRES_DB: order_db
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: Theanh123
+    ports: ["5435:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d order_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  db-payment:
+    image: postgres:15
+    container_name: db-payment
+    environment:
+      POSTGRES_DB: payment_db
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: Theanh123
+    ports: [ "5436:5432" ] # Đây là nơi khai báo cổng 5436 cho pgAdmin nè Anh
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U root -d payment_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # --- Application Services ---
+  user-service:
+    build: ./user-service
+    container_name: user-service
+    ports: ["8081:8081"]
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db-user:5432/user_db
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: Theanh123
+      JWT_SECRET: YourSuperSecretKeyForJWTThatIsVeryLongAndSecure
+    depends_on:
+      db-user:
+        condition: service_healthy
+
+  food-service:
+    build: ./food-service
+    container_name: food-service
+    ports: ["8082:8082"]
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db-food:5432/food_db
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: Theanh123
+    depends_on:
+      db-food:
+        condition: service_healthy
+
+  order-service:
+    build: ./order-service
+    container_name: order-service
+    ports: ["8083:8083"]
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db-order:5432/order_db
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: Theanh123
+      # URL gọi Service trong Docker Network
+      FOOD_SERVICE_URL: http://food-service:8082/api/foods
+      USER_SERVICE_URL: http://user-service:8081/api/users
+    depends_on:
+      db-order:
+        condition: service_healthy
+
+  # --- Payment Service ---
+  payment-service:
+    build: ./payment-service
+    container_name: payment-service
+    ports: [ "8084:8084" ]
+    environment:
+      # Chú ý: Trong mạng Docker thì dùng tên service 'db-payment' và cổng 5432
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db-payment:5432/payment_db
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: Theanh123
+      ORDER_SERVICE_URL: http://order-service:8083/api/orders
+      NOTIFICATION_SERVICE_URL: http://notification-service:8085/api/notifications
+    depends_on:
+      db-payment:
+        condition: service_healthy
+
+  # --- Notification Service ---
+  notification-service:
+    build: ./notification-service
+    container_name: notification-service
+    ports: ["8085:8085"]
+    # Service này có thể không cần DB nếu chỉ System.out.println()
+    depends_on:
+      - payment-service
+
+  # --- API Gateway (Cập nhật route) ---
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports: ["8080:8080"]
+    environment:
+      PAYMENT_SERVICE_URL: http://payment-service:8084
+      NOTIFICATION_SERVICE_URL: http://notification-service:8085
+    depends_on:
+      - user-service
+      - food-service
+      - order-service
+      - payment-service
+      - notification-service
