@@ -7,6 +7,11 @@ spring:
   profiles:
     active: dev
 
+  elasticsearch:
+    uris: http://localhost:9200 # Hoặc URL host Cloud của bạn
+#    username: elastic
+#    password: your_password
+
 #  datasource:
 #    url: jdbc:postgresql://localhost:5434/food_db?options=-c%20timezone=UTC
 #    username: root

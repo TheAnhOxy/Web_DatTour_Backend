@@ -1,140 +1,102 @@
+version: '3.8'
+
+
 services:
-  # --- Databases ---
-  db-user:
-    image: postgres:15
-    container_name: db-user
+  # 1. SEARCH ENGINE
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
+    container_name: webtour-elasticsearch
     environment:
-      POSTGRES_DB: user_db
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: Theanh123
-    ports: ["5433:5432"]
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.http.ssl.enabled=false # Tắt SSL cho HTTP
+      - xpack.security.transport.ssl.enabled=false # Tắt SSL cho giao tiếp nội bộ
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U root -d user_db"]
-      interval: 5s
+      test: [ "CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"\\|\"status\":\"yellow\"'" ]
+      interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+    ports:
+      - "9200:9200"
+    networks:
+      - gotour-network
 
-  db-food:
-    image: postgres:15
-    container_name: db-food
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.1
+    container_name: kibana
+    ports:
+      - "5601:5601"
     environment:
-      POSTGRES_DB: food_db
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: Theanh123
-    ports: ["5434:5432"]
-    volumes:
-      - ./food-service/init-db:/docker-entrypoint-initdb.d/seed.sql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U root -d food_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  db-order:
-    image: postgres:15
-    container_name: db-order
-    environment:
-      POSTGRES_DB: order_db
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: Theanh123
-    ports: ["5435:5432"]
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U root -d order_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  db-payment:
-    image: postgres:15
-    container_name: db-payment
-    environment:
-      POSTGRES_DB: payment_db
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: Theanh123
-    ports: [ "5436:5432" ] # Đây là nơi khai báo cổng 5436 cho pgAdmin nè Anh
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U root -d payment_db" ]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  # --- Application Services ---
-  user-service:
-    build: ./user-service
-    container_name: user-service
-    ports: ["8081:8081"]
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db-user:5432/user_db
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: Theanh123
-      JWT_SECRET: YourSuperSecretKeyForJWTThatIsVeryLongAndSecure
+      - ELASTICSEARCH_HOSTS=http://webtour-elasticsearch:9200
+      - I18N_LOCALE=en
     depends_on:
-      db-user:
+      elasticsearch:
         condition: service_healthy
+    networks:
+      - gotour-network
 
-  food-service:
-    build: ./food-service
-    container_name: food-service
-    ports: ["8082:8082"]
+  # 2. MESSAGE BROKER (Dùng image của wurstmeister cho nhẹ và ổn định)
+  zookeeper:
+    image: wurstmeister/zookeeper:latest
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    networks:
+      - gotour-network
+
+  kafka:
+    image: wurstmeister/kafka:latest
+    container_name: kafka
+    ports:
+      - "9092:9092"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db-food:5432/food_db
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: Theanh123
+      KAFKA_ADVERTISED_HOST_NAME: localhost
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_CREATE_TOPICS: "tour-events:1:1" # Tạo sẵn topic cho bạn
     depends_on:
-      db-food:
-        condition: service_healthy
+      - zookeeper
+    networks:
+      - gotour-network
 
-  order-service:
-    build: ./order-service
-    container_name: order-service
-    ports: ["8083:8083"]
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db-order:5432/order_db
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: Theanh123
-      # URL gọi Service trong Docker Network
-      FOOD_SERVICE_URL: http://food-service:8082/api/foods
-      USER_SERVICE_URL: http://user-service:8081/api/users
-    depends_on:
-      db-order:
-        condition: service_healthy
+  # 3. CACHING
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - gotour-network
 
-  # --- Payment Service ---
-  payment-service:
-    build: ./payment-service
-    container_name: payment-service
-    ports: [ "8084:8084" ]
-    environment:
-      # Chú ý: Trong mạng Docker thì dùng tên service 'db-payment' và cổng 5432
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db-payment:5432/payment_db
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: Theanh123
-      ORDER_SERVICE_URL: http://order-service:8083/api/orders
-      NOTIFICATION_SERVICE_URL: http://notification-service:8085/api/notifications
-    depends_on:
-      db-payment:
-        condition: service_healthy
+  # 4. MONITORING
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    # Tạm thời comment volumes nếu bạn chưa tạo file prometheus.yml để tránh lỗi khởi động
+    # volumes:
+    #   - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - gotour-network
 
-  # --- Notification Service ---
-  notification-service:
-    build: ./notification-service
-    container_name: notification-service
-    ports: ["8085:8085"]
-    # Service này có thể không cần DB nếu chỉ System.out.println()
-    depends_on:
-      - payment-service
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - gotour-network
 
-  # --- API Gateway (Cập nhật route) ---
-  api-gateway:
-    build: ./api-gateway
-    container_name: api-gateway
-    ports: ["8080:8080"]
-    environment:
-      PAYMENT_SERVICE_URL: http://payment-service:8084
-      NOTIFICATION_SERVICE_URL: http://notification-service:8085
-    depends_on:
-      - user-service
-      - food-service
-      - order-service
-      - payment-service
-      - notification-service
+  # 5. TRACING
+  zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - gotour-network
+
+networks:
+  gotour-network:
+    driver: bridge
