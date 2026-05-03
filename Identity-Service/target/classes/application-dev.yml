@@ -15,7 +15,7 @@ openapi:
   service:
     api-docs: identify-service
     server: http://localhost:${server.port}
-    title: user service
+    title: identify service
     version: 1.0.0
 #  jpa:
 #    database-platform: org.hibernate.dialect.H2Dialect

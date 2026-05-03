@@ -3,6 +3,7 @@ package com.tour.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -18,6 +19,8 @@ public class TourImage {
     private String imageUrl;
     private Boolean isCover;
     private Integer sortOrder;
+
+    @CreationTimestamp
     private LocalDateTime createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY)

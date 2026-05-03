@@ -1,6 +1,7 @@
 package com.tour.entity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -20,5 +21,6 @@ public class Wishlist {
     @JoinColumn(name="tour_id")
     private Tour tour;
 
+    @CreationTimestamp
     private LocalDateTime createdAt;
 }

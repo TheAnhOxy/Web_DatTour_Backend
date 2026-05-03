@@ -2,6 +2,7 @@ package com.tour.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -38,8 +39,6 @@ public class Tour {
 
     private BigDecimal basePrice;
 
-    private Integer bookedSlots = 0;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private TourCategory category;
@@ -61,6 +60,8 @@ public class Tour {
 
     @OneToMany(mappedBy = "tour")
     private List<Departure> departures;
+
+    @CreationTimestamp
     private LocalDateTime createdAt;
 
 

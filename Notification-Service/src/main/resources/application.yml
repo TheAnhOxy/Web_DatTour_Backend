@@ -1,0 +1,54 @@
+server:
+  port: 8087
+
+spring:
+  application:
+    name: notification-service
+  profiles:
+    active: dev
+
+  datasource:
+    url: jdbc:postgresql://ep-red-river-amkvj9tx-pooler.c-5.us-east-1.aws.neon.tech/notification_db?sslmode=require
+    username: neondb_owner
+    password: npg_1lr8XJZoFbMS
+    driver-class-name: org.postgresql.Driver
+
+    mail:
+      host: smtp.gmail.com
+      port: 587
+      username: ${MAIL_USERNAME}
+      password: ${MAIL_PASSWORD}
+      properties:
+        mail.smtp.auth: true
+        mail.smtp.starttls.enable: true
+
+    jpa:
+      hibernate:
+        ddl-auto: validate
+      show-sql: true
+      properties:
+        hibernate:
+          format_sql: true
+          dialect: org.hibernate.dialect.PostgreSQLDialect
+
+    flyway:
+      enabled: true
+      baseline-on-migrate: true
+      locations: classpath:db/migration
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+
+logging:
+  level:
+    root: INFO
+    web: INFO
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html

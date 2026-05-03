@@ -7,15 +7,25 @@ spring:
   profiles:
     active: dev
 
-#  datasource:
-#    url: jdbc:postgresql://localhost:5434/food_db?options=-c%20timezone=UTC
-#    username: root
-#    password: Theanh123
-#    driver-class-name: org.postgresql.Driver
-#  jpa:
-#    hibernate:
-#      ddl-auto: update
-#    show-sql: true
+  datasource:
+    url: jdbc:postgresql://ep-red-river-amkvj9tx-pooler.c-5.us-east-1.aws.neon.tech/payment_db?sslmode=require
+    username: neondb_owner
+    password: npg_1lr8XJZoFbMS
+    driver-class-name: org.postgresql.Driver
+
+    jpa:
+      hibernate:
+        ddl-auto: validate
+      show-sql: true
+      properties:
+        hibernate:
+          format_sql: true
+          dialect: org.hibernate.dialect.PostgreSQLDialect
+
+    flyway:
+      enabled: true
+      baseline-on-migrate: true
+      locations: classpath:db/migration
 
 management:
   endpoints:

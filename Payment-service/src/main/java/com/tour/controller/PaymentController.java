@@ -1,7 +1,10 @@
 package com.tour.controller;
 
 
+import com.tour.dto.response.PaymentResponse;
+import com.tour.service.PaymentService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -13,6 +16,20 @@ public class PaymentController {
     @GetMapping
     public String getHello(){
         return "hello payment";
+    }
+
+    private final PaymentService paymentService;
+
+    // Lấy thông tin thanh toán theo mã đơn hàng
+    @GetMapping("/booking/{bookingId}")
+    public ResponseEntity<PaymentResponse> getPaymentByBooking(@PathVariable Long bookingId) {
+        return ResponseEntity.ok(paymentService.getPaymentByBookingId(bookingId));
+    }
+
+    // Lấy chi tiết một giao dịch theo transactionId (dùng để đối soát)
+    @GetMapping("/transaction/{transactionId}")
+    public ResponseEntity<PaymentResponse> getPaymentByTransaction(@PathVariable String transactionId) {
+        return ResponseEntity.ok(paymentService.getPaymentByTransactionId(transactionId));
     }
 
 //    @PostMapping

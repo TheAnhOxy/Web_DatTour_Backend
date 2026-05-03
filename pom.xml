@@ -36,6 +36,7 @@
 		<module>Core-service</module>
 		<module>Search-service</module>
 		<module>Support-service</module>
+		<module>Notification-Service</module>
 
 	</modules>
 	<properties>
