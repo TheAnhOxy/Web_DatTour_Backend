@@ -10,15 +10,6 @@
         <module name="Booking-service" />
         <module name="Identity-Service" />
       </profile>
-      <profile name="Annotation profile for Core-service" enabled="true">
-        <sourceOutputDir name="target/generated-sources/annotations" />
-        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
-        <outputRelativeToContentRoot value="true" />
-        <processorPath useClasspath="false">
-          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.30/lombok-1.18.30.jar" />
-        </processorPath>
-        <module name="Core-service" />
-      </profile>
       <profile name="Annotation profile for Web_DatTour_Backend" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
@@ -28,6 +19,7 @@
         </processorPath>
         <module name="api-gateway" />
         <module name="Support-service" />
+        <module name="Core-service" />
         <module name="Search-service" />
         <module name="Payment-service" />
       </profile>
