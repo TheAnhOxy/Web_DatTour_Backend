@@ -1,14 +1,24 @@
 package com.tour.controller;
 
 
+import com.tour.entity.Review;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/supports")
 @RequiredArgsConstructor
 public class SupportController {
 
+    private final MongoTemplate mongoTemplate;
+
+    @GetMapping("/reviews")
+    public List<Review> getReviews() {
+        return mongoTemplate.findAll(Review.class);
+    }
 
     @GetMapping
     public String getHello(){

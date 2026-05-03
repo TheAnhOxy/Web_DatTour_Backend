@@ -7,15 +7,10 @@ spring:
   profiles:
     active: dev
 
-#  datasource:
-#    url: jdbc:postgresql://localhost:5434/food_db?options=-c%20timezone=UTC
-#    username: root
-#    password: Theanh123
-#    driver-class-name: org.postgresql.Driver
-#  jpa:
-#    hibernate:
-#      ddl-auto: update
-#    show-sql: true
+    data:
+      mongodb:
+         uri: mongodb+srv://theanh123:theanh123@cluster.mongodb.net/tour_db
+
 
 management:
   endpoints:
