@@ -5,8 +5,6 @@ WORKDIR /app
 # Copy pom.xml trước để tải các thư viện (cache dependency)
 COPY pom.xml .
 RUN mvn dependency:go-offline -B
-
-# Copy mã nguồn và đóng gói file JAR
 COPY src ./src
 RUN mvn clean package -DskipTests
 
@@ -20,8 +18,6 @@ USER spring:spring
 
 # Copy file jar từ stage build sang
 COPY --from=build /app/target/*.jar app.jar
-
-# Khai báo Port (Thay đổi số này theo từng service: 8081, 8082, 8086...)
 EXPOSE 8080
 
 # Tối ưu hóa JVM cho môi trường Container
