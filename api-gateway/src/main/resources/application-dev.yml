@@ -23,43 +23,43 @@ spring:
           uri: http://localhost:8081
           predicates:
             - Path=/tours/**, /v3/api-docs/identify-service
-          filters:
-            - RewritePath=/tours/(?<segment>.*), /$\{segment}
-            - CustomizeFilter
+#          filters:
+#            - RewritePath=/tours/(?<segment>.*), /$\{segment}
+#            - CustomizeFilter
         - id: core-service
           uri: http://localhost:8082
           predicates:
             - Path=/cores/**, /v3/api-docs/core-service
-          filters:
-            - RewritePath=/cores/(?<segment>.*), /$\{segment} # thay thế ký tự /account/ thành /
-            - CustomizeFilter
+#          filters:
+#            - RewritePath=/cores/(?<segment>.*), /$\{segment} # thay thế ký tự /account/ thành /
+#            - CustomizeFilter
 
         - id: search-service
           uri: http://localhost:8083
           predicates:
             - Path=/search/**, /v3/api-docs/search-service
-          filters:
-            - RewritePath=/search/(?<segment>.*), /$\{segment} # thay thế ký tự /mail/ thành /
-            - CustomizeFilter
+#          filters:
+#            - RewritePath=/search/(?<segment>.*), /$\{segment} # thay thế ký tự /mail/ thành /
+#            - CustomizeFilter
         - id: booking-service
           uri: http://localhost:8084
           predicates:
             - Path=/bookings/**, /v3/api-docs/booking-service
-          filters:
-            - RewritePath=/bookings/(?<segment>.*), /$\{segment} # thay thế ký tự /product/ thành /
-            - CustomizeFilter
+#          filters:
+#            - RewritePath=/bookings/(?<segment>.*), /$\{segment} # thay thế ký tự /product/ thành /
+#            - CustomizeFilter
         - id: payment-service
           uri: http://localhost:8085
           predicates:
             - Path=/payments/**, /v3/api-docs/payment-service
-          filters:
-            - RewritePath=/payments/(?<segment>.*), /$\{segment} # thay thế ký tự /order/ thành /
+#          filters:
+#            - RewritePath=/payments/(?<segment>.*), /$\{segment} # thay thế ký tự /order/ thành /
         - id: support-service
           uri: http://localhost:8086
           predicates:
             - Path=/supports/**, /v3/api-docs/support-service
-          filters:
-            - RewritePath=/supports/(?<segment>.*), /$\{segment} # thay thế ký tự /order/ thành /
+#          filters:
+#            - RewritePath=/supports/(?<segment>.*), /$\{segment} # thay thế ký tự /order/ thành /
 #        - id: mail-service
 #          uri: http://localhost:8087
 #          predicates:
@@ -71,9 +71,9 @@ spring:
           uri: http://localhost:8087
           predicates:
             - Path=/notification/**, /v3/api-docs/notification-service
-          filters:
-            - RewritePath=/notification/(?<segment>.*), /$\{segment} # thay thế ký tự /mail/ thành /
-            - CustomizeFilter
+#          filters:
+#            - RewritePath=/notification/(?<segment>.*), /$\{segment} # thay thế ký tự /mail/ thành /
+#            - CustomizeFilter
 
 
 springdoc:
