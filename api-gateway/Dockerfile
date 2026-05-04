@@ -1,13 +1,28 @@
-
-FROM eclipse-temurin:21-jre-alpine
-
+# Stage 1: Build với Maven (Sử dụng cache để build nhanh)
+FROM maven:3.9.6-eclipse-temurin-21-alpine AS build
 WORKDIR /app
 
+# Copy pom.xml trước để tải các thư viện (cache dependency)
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
 
-ARG JAR_FILE=target/*.jar
+# Copy mã nguồn và đóng gói file JAR
+COPY src ./src
+RUN mvn clean package -DskipTests
 
-COPY ${JAR_FILE} app.jar
+# Stage 2: Runtime (Sử dụng JRE nhẹ để chạy app)
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Tạo user 'spring' để chạy ứng dụng (Không dùng root để bảo mật)
+RUN addgroup -S spring && adduser -S spring -G spring
+USER spring:spring
 
+# Copy file jar từ stage build sang
+COPY --from=build /app/target/*.jar app.jar
+
+# Khai báo Port (Thay đổi số này theo từng service: 8081, 8082, 8086...)
 EXPOSE 8080
+
+# Tối ưu hóa JVM cho môi trường Container
+ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
