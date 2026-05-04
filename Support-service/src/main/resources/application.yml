@@ -7,9 +7,9 @@ spring:
   profiles:
     active: dev
 
-    data:
-      mongodb:
-         uri: mongodb+srv://theanh123:theanh123@cluster.mongodb.net/tour_db
+  data:
+    mongodb:
+      uri: mongodb+srv://theanh123:theanh123@cluster0.foryjm4.mongodb.net/tour_db?retryWrites=true&w=majority&appName=Cluster0
 
 
 management:
