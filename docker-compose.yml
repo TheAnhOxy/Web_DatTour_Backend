@@ -122,7 +122,7 @@ services:
     ports:
       - "8081:8081"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/identity_db 
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/identity_db
       - SPRING_REDIS_HOST=redis
     depends_on:
       - redis
