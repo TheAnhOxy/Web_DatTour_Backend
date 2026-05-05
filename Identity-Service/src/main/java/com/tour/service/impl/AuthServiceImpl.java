@@ -1,19 +1,28 @@
 package com.tour.service.impl;
 
+import com.tour.dto.event.NotificationEvent;
 import com.tour.dto.request.LoginRequest;
 import com.tour.dto.request.RegisterRequest;
+import com.tour.dto.request.ResetPasswordRequest;
 import com.tour.dto.response.LoginResponse;
 import com.tour.entity.User;
 import com.tour.repository.UserRepository;
 import com.tour.service.AuthService;
 import com.tour.utils.JwtUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;

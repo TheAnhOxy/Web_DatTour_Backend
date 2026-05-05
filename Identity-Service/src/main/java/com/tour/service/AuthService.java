@@ -2,6 +2,7 @@ package com.tour.service;
 
 import com.tour.dto.request.LoginRequest;
 import com.tour.dto.request.RegisterRequest;
+import com.tour.dto.request.ResetPasswordRequest;
 import com.tour.dto.response.LoginResponse;
 
 public interface AuthService {
