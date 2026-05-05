@@ -2,11 +2,33 @@ server:
   port: 8080
 
 spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
   application:
     name: api-gateway
   profiles:
     active: dev
 
+  cloud:
+    gateway:
+      routes:
+        # Route cho Tour Service (đã có)
+        - id: tour-service
+          uri: lb://tour-service
+          predicates:
+            - Path=/tours/**
+          filters:
+            - AuthenticationFilter
+
+        # Cấu hình MỚI cho Payment Service
+        - id: payment-service
+          uri: lb://payment-service  # Tên service đăng ký trên Eureka
+          predicates:
+            - Path=/payments/**      # Mọi request bắt đầu bằng /payments/ sẽ vào đây
+          filters:
+            - AuthenticationFilter
 management:
   endpoints:
     web:
