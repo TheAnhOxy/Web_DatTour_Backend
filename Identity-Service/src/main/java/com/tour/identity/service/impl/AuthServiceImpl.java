@@ -1,11 +1,9 @@
 package com.tour.identity.service.impl;
 
 import com.tour.identity.dto.event.NotificationEvent;
-import com.tour.identity.dto.request.LoginRequest;
-import com.tour.identity.dto.request.RegisterRequest;
-import com.tour.identity.dto.request.ResetPasswordRequest;
-import com.tour.identity.dto.request.UpdateProfileRequest;
+import com.tour.identity.dto.request.*;
 import com.tour.identity.dto.response.LoginResponse;
+import com.tour.identity.dto.response.UserResponse;
 import com.tour.identity.entity.User;
 import com.tour.identity.repository.UserRepository;
 import com.tour.identity.service.AuthService;
@@ -19,8 +17,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -179,5 +179,55 @@ public class AuthServiceImpl implements AuthService {
 
         userRepository.save(user);
         log.info("Profile updated for user: {}", user.getEmail());
+    }
+
+    @Override
+    public IntrospectResponse introspect(IntrospectRequest request) {
+        try {
+            var signedJWT = jwtUtils.verifyToken(request.getToken());
+            String jti = signedJWT.getJWTClaimsSet().getJWTID();
+
+            // Check trong Blacklist Redis
+            boolean isBlacklisted = redisTemplate.hasKey("BLACKLIST:" + jti);
+
+            return IntrospectResponse.builder()
+                    .valid(!isBlacklisted)
+                    .build();
+        } catch (Exception e) {
+            return IntrospectResponse.builder().valid(false).build();
+        }
+    }
+
+    @Override
+    public List<UserResponse> getAllUsers() {
+        // Sau khi sửa ở Repository, 'user' ở đây sẽ được hiểu là kiểu User entity
+        return userRepository.findAllByStatusNot("DELETED").stream()
+                .map(user -> UserResponse.builder()
+                        .id(user.getId())
+                        .email(user.getEmail())
+                        .fullName(user.getFullName())
+                        .phone(user.getPhone())
+                        .address(user.getAddress())
+                        .dob(user.getDob())
+                        .gender(user.getGender())
+                        .status(user.getStatus())
+                        .avatarUrl(user.getAvatarUrl())
+                        .currentPoints(user.getCurrentPoints())
+                        .roles(user.getRoles().stream()
+                                .map(role -> role.getName()) // Lấy tên Role (ADMIN, USER...)
+                                .collect(Collectors.toSet()))
+                        .build())
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public void deleteUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("USER_NOT_FOUND"));
+        user.setStatus("DELETED");
+        userRepository.save(user);
+
+        log.info("User with ID {} has been soft-deleted", userId);
     }
 }

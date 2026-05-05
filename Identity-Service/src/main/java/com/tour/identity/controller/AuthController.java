@@ -1,12 +1,10 @@
 package com.tour.identity.controller;
 
-import com.tour.identity.dto.request.LoginRequest;
-import com.tour.identity.dto.request.RegisterRequest;
-import com.tour.identity.dto.request.ResetPasswordRequest;
-import com.tour.identity.dto.request.UpdateProfileRequest;
+import com.tour.identity.dto.request.*;
 import com.tour.identity.dto.response.ApiResponse;
 import com.tour.identity.dto.response.LoginResponse;
 import com.tour.identity.service.AuthService;
+import com.tour.identity.service.RoleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AuthController {
     private final AuthService authService;
+    private final RoleService roleService;
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse> login(@Valid @RequestBody LoginRequest request) {
@@ -78,5 +77,42 @@ public class AuthController {
                 .build());
     }
 
+    // API nội bộ cho Gateway
+    @PostMapping("/introspect")
+    public ResponseEntity<ApiResponse> introspect(@RequestBody IntrospectRequest request) {
+        return ResponseEntity.ok(ApiResponse.builder()
+                .status(200)
+                .data(authService.introspect(request))
+                .build());
+    }
+
+
+    @PostMapping("/admin/assign-roles")
+    // @PreAuthorize("hasRole('ADMIN')") // Spring Security Method Security
+    public ResponseEntity<ApiResponse> assignRoles(@RequestBody RoleAssignmentRequest request) {
+        roleService.assignRoles(request);
+        return ResponseEntity.ok(ApiResponse.builder()
+                .status(200)
+                .message("Roles assigned successfully")
+                .build());
+    }
+
+    // 3. Soft Delete User
+    @DeleteMapping("/admin/users/{id}")
+    public ResponseEntity<ApiResponse> deleteUser(@PathVariable Long id) {
+        authService.deleteUser(id);
+        return ResponseEntity.ok(ApiResponse.builder()
+                .status(200)
+                .message("User deleted successfully (Soft-delete)")
+                .build());
+    }
+
+    @GetMapping("/admin/user")
+    public ResponseEntity<ApiResponse> getAllUsers(){
+        return ResponseEntity.ok(ApiResponse.builder()
+                .status(200)
+                .data(authService.getAllUsers())
+                .build());
+    }
 
 }
