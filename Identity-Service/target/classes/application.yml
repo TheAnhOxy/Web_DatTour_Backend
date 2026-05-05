@@ -1,9 +1,13 @@
 server:
   port: 8081
 
+jwt:
+  signerKey: my-super-secret-key-that-is-at-least-64-bytes-long-1234567890-abcdef
 spring:
   application:
     name: identity-service
+
+
 
   datasource:
     url: jdbc:postgresql://ep-red-river-amkvj9tx-pooler.c-5.us-east-1.aws.neon.tech/identity_db?sslmode=require
@@ -25,9 +29,9 @@ spring:
             non_contextual_creation: true
 
   flyway:
-    enabled: true
-    baseline-on-migrate: true
-    locations: classpath:db/migration
+    enabled: false
+#    baseline-on-migrate: true
+#    locations: classpath:db/migration
 
   management:
     endpoints:

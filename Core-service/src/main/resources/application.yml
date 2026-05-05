@@ -9,7 +9,7 @@ spring:
     active: dev
 
   datasource:
-    url: jdbc:postgresql://ep-red-river-amkvj9tx-pooler.c-5.us-east-1.aws.neon.tech:5432/core_db?sslmode=require&channel_binding=require
+    url: jdbc:postgresql://ep-red-river-amkvj9tx-pooler.c-5.us-east-1.aws.neon.tech:5432/core_db?sslmode=require&channel_binding=require&currentSchema=public
     username: core_user
     password: X9!mQ2#vLp7$Rt28
     driver-class-name: org.postgresql.Driver
@@ -27,9 +27,10 @@ spring:
             non_contextual_creation: true
 
   flyway:
-    enabled: true
-    baseline-on-migrate: true
-    locations: classpath:db/migration
+    enabled: false
+#    baseline-on-migrate: true
+#    schemas: public
+#    locations: classpath:db/migration
 
 management:
   endpoints:

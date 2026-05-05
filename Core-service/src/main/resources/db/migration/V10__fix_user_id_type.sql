@@ -1,0 +1,2 @@
+-- ALTER TABLE wishlists
+-- ALTER COLUMN user_id TYPE BIGINT;

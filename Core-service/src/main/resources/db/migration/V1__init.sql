@@ -189,7 +189,7 @@ CREATE TABLE IF NOT EXISTS tour_promotions (
 CREATE TABLE IF NOT EXISTS wishlists (
                                          id BIGSERIAL PRIMARY KEY,
 
-                                         user_id INT NOT NULL,
+                                         user_id BIGSERIAL NOT NULL,
 
                                          tour_id BIGINT NOT NULL REFERENCES tours(id) ON DELETE CASCADE,
 
