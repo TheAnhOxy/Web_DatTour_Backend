@@ -8,7 +8,6 @@ spring:
     name: identity-service
 
 
-
   datasource:
     url: jdbc:postgresql://ep-red-river-amkvj9tx-pooler.c-5.us-east-1.aws.neon.tech/identity_db?sslmode=require
     username: neondb_owner
@@ -51,3 +50,12 @@ spring:
       path: /v3/api-docs
     swagger-ui:
       path: /swagger-ui.html
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/ # Địa chỉ của Eureka Server
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true

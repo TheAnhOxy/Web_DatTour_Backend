@@ -47,7 +47,7 @@ public class AuthenticationGatewayFilterFactory extends AbstractGatewayFilterFac
 
             return webClientBuilder.build()
                     .post()
-                    .uri("http://localhost:8081/auth/introspect")
+                    .uri("http://identity-service/auth/introspect")
                     .bodyValue(new IntrospectRequest(token))
                     .retrieve()
                     .bodyToMono(ApiResponse.class)
