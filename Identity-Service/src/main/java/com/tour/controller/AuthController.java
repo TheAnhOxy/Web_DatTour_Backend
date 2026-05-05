@@ -1,6 +1,8 @@
 package com.tour.controller;
 
 import com.tour.dto.request.LoginRequest;
+import com.tour.dto.request.RegisterRequest;
+import com.tour.dto.request.ResetPasswordRequest;
 import com.tour.dto.response.ApiResponse;
 import com.tour.dto.response.LoginResponse;
 import com.tour.service.AuthService;
@@ -40,6 +42,15 @@ public class AuthController {
         return ResponseEntity.status(201).body(ApiResponse.builder()
                 .status(201)
                 .message("Register successfully. Please check your email.")
+                .build());
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ResponseEntity.ok(ApiResponse.builder()
+                .status(200)
+                .message("Password has been reset successfully")
                 .build());
     }
 
