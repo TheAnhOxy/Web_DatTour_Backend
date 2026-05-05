@@ -1,6 +1,6 @@
 package com.tour.notification.listener;
 
-import com.tour.identity.dto.event.NotificationEvent;
+import com.tour.notification.dto.event.NotificationEvent;
 import com.tour.notification.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +31,6 @@ public class NotificationListener {
             }
         } catch (Exception e) {
             log.error("Failed to send email to {}: {}", event.getRecipient(), e.getMessage());
-            // Senior tip: Ở đây có thể triển khai Retry Mechanism hoặc đẩy vào Dead Letter Topic (DLT)
         }
     }
 }

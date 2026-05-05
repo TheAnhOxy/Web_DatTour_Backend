@@ -2,9 +2,9 @@ package com.tour.notification.exception;
 
 
 
-import com.tour.identity.exception.ForBiddenException;
-import com.tour.identity.exception.InvalidDataException;
-import com.tour.identity.exception.ResourceNotFoundException;
+import com.tour.notification.exception.ForBiddenException;
+import com.tour.notification.exception.InvalidDataException;
+import com.tour.notification.exception.ResourceNotFoundException;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;

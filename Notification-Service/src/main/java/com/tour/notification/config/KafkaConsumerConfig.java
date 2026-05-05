@@ -1,6 +1,6 @@
 package com.tour.notification.config;
 
-import com.tour.identity.dto.event.NotificationEvent;
+import com.tour.notification.dto.event.NotificationEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
