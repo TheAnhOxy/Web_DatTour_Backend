@@ -54,5 +54,14 @@ public class AuthController {
                 .build());
     }
 
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse> forgotPassword(@RequestParam String email) {
+        authService.forgotPassword(email);
+        return ResponseEntity.ok(ApiResponse.builder()
+                .status(200)
+                .message("OTP has been sent to your email")
+                .build());
+    }
+
 
 }
