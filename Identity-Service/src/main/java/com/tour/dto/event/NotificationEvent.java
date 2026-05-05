@@ -15,5 +15,5 @@ public class NotificationEvent {
     private String channel;    // EMAIL
     private String recipient;  // email user
     private String templateCode; // WELCOME_EMAIL, FORGOT_PASSWORD
-    private Map<String, Object> param; // { "otp": "123456", "name": "Anh" }
+    private Map<String, Object> param; 
 }
