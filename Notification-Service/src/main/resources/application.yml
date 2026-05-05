@@ -7,6 +7,33 @@ spring:
   profiles:
     active: dev
 
+    spring:
+      # Cấu hình Kafka để lắng nghe (Consumer)
+      kafka:
+        bootstrap-servers: localhost:9092
+        consumer:
+          group-id: notification-group
+          key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+          value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+          properties:
+            spring.json.trusted.packages: "*"
+
+      # Cấu hình gửi Mail thực tế
+      mail:
+        host: smtp.gmail.com
+        port: 587
+        username: theanh199405023@gmail.com
+        password: lbwcahcnaealcyzb
+        properties:
+          mail:
+            smtp:
+              auth: true
+              starttls:
+                enable: true
+              connectiontimeout: 5000
+              timeout: 5000
+              writetimeout: 5000
+
   datasource:
     url: jdbc:postgresql://ep-red-river-amkvj9tx-pooler.c-5.us-east-1.aws.neon.tech/notification_db?sslmode=require
     username: neondb_owner
