@@ -22,7 +22,7 @@ spring:
         - id:   identify-service
           uri: http://localhost:8081
           predicates:
-            - Path=/tours/**, /v3/api-docs/identify-service
+            - Path=/auth/**, /v3/api-docs/identify-service
 #          filters:
 #            - RewritePath=/tours/(?<segment>.*), /$\{segment}
 #            - CustomizeFilter

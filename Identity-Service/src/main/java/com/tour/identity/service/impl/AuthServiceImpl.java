@@ -4,6 +4,7 @@ import com.tour.identity.dto.event.NotificationEvent;
 import com.tour.identity.dto.request.LoginRequest;
 import com.tour.identity.dto.request.RegisterRequest;
 import com.tour.identity.dto.request.ResetPasswordRequest;
+import com.tour.identity.dto.request.UpdateProfileRequest;
 import com.tour.identity.dto.response.LoginResponse;
 import com.tour.identity.entity.User;
 import com.tour.identity.repository.UserRepository;
@@ -17,6 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -119,27 +121,63 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
-        // 1. Lấy OTP từ Redis
+        // Lấy OTP từ Redis
         String storedOtp = redisTemplate.opsForValue().get(OTP_PREFIX + request.getEmail());
 
         if (storedOtp == null) throw new RuntimeException("OTP_EXPIRED");
         if (!storedOtp.equals(request.getOtp())) throw new RuntimeException("INVALID_OTP");
-
-        // 2. Tìm user và update mật khẩu
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("USER_NOT_FOUND"));
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
 
-        // 3. Xóa OTP sau khi dùng xong
+        // Xóa OTP sau khi dùng xong
         redisTemplate.delete(OTP_PREFIX + request.getEmail());
         log.info("Password reset successfully for: {}", request.getEmail());
     }
 
     @Override
     public void logout(String token) {
-        // Logic: Senior thường sẽ lấy JTI (JWT ID) của token này
-        // và lưu vào Redis với TTL bằng thời gian hết hạn còn lại của Token
+        try {
+            // Verify và lấy object SignedJWT
+            var signedJWT = jwtUtils.verifyToken(token);
+            // Lấy JTI (ID duy nhất của token)
+            String jti = signedJWT.getJWTClaimsSet().getJWTID();
+
+            //  Lấy thời gian hết hạn
+            Date expiryTime = signedJWT.getJWTClaimsSet().getExpirationTime();
+
+            // Tính toán TTL cho Redis
+            long ttlInSeconds = (expiryTime.getTime() - System.currentTimeMillis()) / 1000;
+
+            if (ttlInSeconds > 0) {
+                redisTemplate.opsForValue().set(
+                        "BLACKLIST:" + jti,
+                        "logged_out",
+                        ttlInSeconds,
+                        TimeUnit.SECONDS
+                );
+                log.info("Successfully blacklisted JTI: {}", jti);
+            }
+        } catch (Exception e) {
+            log.warn("Logout attempt with invalid/expired token: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public void updateProfile(Long userId, UpdateProfileRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("USER_NOT_FOUND"));
+        if (request.getFullName() != null) user.setFullName(request.getFullName());
+        if (request.getPhone() != null) user.setPhone(request.getPhone());
+        if (request.getAddress() != null) user.setAddress(request.getAddress());
+        if (request.getDob() != null) user.setDob(request.getDob());
+        if (request.getGender() != null) user.setGender(request.getGender());
+        if (request.getAvatarUrl() != null) user.setAvatarUrl(request.getAvatarUrl());
+
+        userRepository.save(user);
+        log.info("Profile updated for user: {}", user.getEmail());
     }
 }

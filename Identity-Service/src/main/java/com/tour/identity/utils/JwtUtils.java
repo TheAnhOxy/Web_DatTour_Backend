@@ -2,11 +2,14 @@ package com.tour.identity.utils;
 
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.MACSigner;
+import com.nimbusds.jose.crypto.MACVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import com.tour.identity.entity.User;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.text.ParseException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
@@ -62,5 +65,23 @@ public class JwtUtils {
         } catch (JOSEException e) {
             throw new RuntimeException("Error signing token", e);
         }
+    }
+    /**
+     * Xác thực Token và trả về SignedJWT để trích xuất JTI, Expiry, Sub...
+     */
+    public SignedJWT verifyToken(String token) throws JOSEException, ParseException {
+        //  Parse chuỗi string thành object SignedJWT
+        SignedJWT signedJWT = SignedJWT.parse(token);
+        JWSVerifier verifier = new MACVerifier(SIGNER_KEY.getBytes());
+        //  Kiểm tra chữ ký (Signature)
+        boolean verified = signedJWT.verify(verifier);
+        //  Kiểm tra thời gian hết hạn (Expiration)
+        boolean isExpired = signedJWT.getJWTClaimsSet().getExpirationTime().before(new Date());
+
+        if (!verified || isExpired) {
+            throw new RuntimeException("TOKEN_INVALID_OR_EXPIRED");
+        }
+
+        return signedJWT;
     }
 }

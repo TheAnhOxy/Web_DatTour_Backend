@@ -3,6 +3,7 @@ package com.tour.identity.controller;
 import com.tour.identity.dto.request.LoginRequest;
 import com.tour.identity.dto.request.RegisterRequest;
 import com.tour.identity.dto.request.ResetPasswordRequest;
+import com.tour.identity.dto.request.UpdateProfileRequest;
 import com.tour.identity.dto.response.ApiResponse;
 import com.tour.identity.dto.response.LoginResponse;
 import com.tour.identity.service.AuthService;
@@ -27,14 +28,7 @@ public class AuthController {
                 .build());
     }
 
-    @PostMapping("/logout")
-    public ResponseEntity<ApiResponse> logout(@RequestHeader("Authorization") String token) {
-        authService.logout(token.replace("Bearer ", ""));
-        return ResponseEntity.ok(ApiResponse.builder()
-                .status(200)
-                .message("Logout successfully")
-                .build());
-    }
+
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse> register(@Valid @RequestBody RegisterRequest request) {
@@ -60,6 +54,27 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.builder()
                 .status(200)
                 .message("OTP has been sent to your email")
+                .build());
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse> logout(@RequestHeader("Authorization") String authHeader) {
+        String token = authHeader.substring(7);
+        authService.logout(token);
+        return ResponseEntity.ok(ApiResponse.builder()
+                .status(200)
+                .message("Logged out successfully")
+                .build());
+    }
+
+    @PutMapping("/profile/{id}")
+    public ResponseEntity<ApiResponse> updateProfile(
+            @PathVariable Long id,
+            @RequestBody UpdateProfileRequest request) {
+        authService.updateProfile(id, request);
+        return ResponseEntity.ok(ApiResponse.builder()
+                .status(200)
+                .message("Profile updated successfully")
                 .build());
     }
 
