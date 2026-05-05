@@ -33,4 +33,15 @@ public class AuthController {
                 .message("Logout successfully")
                 .build());
     }
+
+    @PostMapping("/register")
+    public ResponseEntity<ApiResponse> register(@Valid @RequestBody RegisterRequest request) {
+        authService.register(request);
+        return ResponseEntity.status(201).body(ApiResponse.builder()
+                .status(201)
+                .message("Register successfully. Please check your email.")
+                .build());
+    }
+
+
 }
