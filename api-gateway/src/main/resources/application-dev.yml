@@ -23,7 +23,8 @@ spring:
           uri: http://localhost:8081
           predicates:
             - Path=/auth/**, /v3/api-docs/identify-service
-#          filters:
+          filters:
+            - name: Authentication
 #            - RewritePath=/tours/(?<segment>.*), /$\{segment}
 #            - CustomizeFilter
         - id: core-service
@@ -52,7 +53,8 @@ spring:
           uri: http://localhost:8085
           predicates:
             - Path=/payments/**, /v3/api-docs/payment-service
-#          filters:
+          filters:
+            - name: Authentication
 #            - RewritePath=/payments/(?<segment>.*), /$\{segment} # thay thế ký tự /order/ thành /
         - id: support-service
           uri: http://localhost:8086

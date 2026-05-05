@@ -11,8 +11,8 @@
     <groupId>com.tour</groupId>
     <artifactId>Core-service</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>Notification-service</name>
-    <description>Notification-service</description>
+    <name>Core-service</name>
+    <description>Core-service</description>
     <url/>
     <licenses>
         <license/>
