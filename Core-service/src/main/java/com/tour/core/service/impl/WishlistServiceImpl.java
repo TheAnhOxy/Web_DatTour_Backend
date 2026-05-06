@@ -35,7 +35,6 @@ public class WishlistServiceImpl implements WishlistService {
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(value = "wishlists", key = "#userId")
     public List<WishlistResponse> getByUserId(Long userId) {
         List<Wishlist> list = wishlistRepository.findByUserId(userId);
         return list.stream().map(w -> toResponse(w)).collect(Collectors.toList());
@@ -43,7 +42,6 @@ public class WishlistServiceImpl implements WishlistService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "wishlists", key = "#userId")
     public WishlistResponse add(Long userId, WishlistRequest request) {
         Long tourId = request.getTourId();
 

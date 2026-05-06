@@ -10,6 +10,8 @@ import com.tour.core.service.PriceConfigService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -28,6 +30,7 @@ public class PriceConfigServiceImpl implements PriceConfigService {
     private final ModelMapper modelMapper;
 
     @Override
+    @Cacheable(value = "priceConfigs", key = "#departureId")
     @Transactional(readOnly = true)
     public PriceConfigResponse getByDepartureId(Long departureId) {
         Optional<PriceConfig> pc = priceConfigRepository.findByDepartureId(departureId);
@@ -39,6 +42,7 @@ public class PriceConfigServiceImpl implements PriceConfigService {
     }
 
     @Override
+    @CacheEvict(value = "priceConfigs", allEntries = true)
     @Transactional
     public PriceConfigResponse upsert(Long departureId, PriceConfigRequest request) {
         var dep = departureRepository.findById(departureId)

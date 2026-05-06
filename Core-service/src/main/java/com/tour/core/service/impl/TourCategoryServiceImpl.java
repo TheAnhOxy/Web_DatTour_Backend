@@ -39,6 +39,7 @@ public class TourCategoryServiceImpl implements TourCategoryService {
     }
 
     @Override
+    @Cacheable(value = "categories", key = "#id")
     @Transactional(readOnly = true)
     public CategoryResponse getById(Long id) {
         TourCategory category = tourCategoryRepository.findById(id)

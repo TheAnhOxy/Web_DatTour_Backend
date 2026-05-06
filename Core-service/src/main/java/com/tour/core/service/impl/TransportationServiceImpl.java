@@ -38,6 +38,7 @@ public class TransportationServiceImpl implements TransportationService {
     }
 
     @Override
+    @Cacheable(value = "transportations", key = "#id")
     @Transactional(readOnly = true)
     public TransportationResponse getById(Long id) {
         Transportation transportation = transportationRepository.findById(id)

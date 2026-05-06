@@ -40,6 +40,7 @@ public class DepartureServiceImpl implements DepartureService {
     private final PriceConfigService priceConfigService;
 
     @Override
+    @Cacheable(value = "departures", key = "'tour:' + #tourId")
     @Transactional(readOnly = true)
     public List<DepartureResponse> getByTourId(Long tourId) {
         List<Departure> deps = departureRepository.findByTourId(tourId);
@@ -47,6 +48,7 @@ public class DepartureServiceImpl implements DepartureService {
     }
 
     @Override
+    @Cacheable(value = "departures", key = "'tour:' + #tourId + ':open'")
     @Transactional(readOnly = true)
     public List<DepartureResponse> getOpenByTourId(Long tourId) {
         List<Departure> deps = departureRepository.findByTourIdAndStatus(tourId, "OPEN");
@@ -54,6 +56,7 @@ public class DepartureServiceImpl implements DepartureService {
     }
 
     @Override
+    @Cacheable(value = "departures", key = "'page:' + #tourId + ':' + (#status == null || #status.isBlank() ? 'ALL' : #status.trim().toUpperCase()) + ':' + #page + ':' + #size")
     @Transactional(readOnly = true)
     public Page<DepartureResponse> getByTourId(Long tourId, String status, int page, int size) {
         PageRequest pageable = PageRequest.of(Math.max(0, page), Math.max(1, size));
