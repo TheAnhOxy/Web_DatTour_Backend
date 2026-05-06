@@ -21,58 +21,73 @@ import java.util.Date;
 import static org.springframework.http.HttpStatus.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
+
 @RestControllerAdvice
 public class GlobalExceptionHandling {
 
-    /**
-     * Handle exception when validate data
-     *
-     * @param e
-     * @param request
-     * @return errorResponse
-     */
+//    /**
+//     * Handle exception when validate data
+//     *
+//     * @param e
+//     * @param request
+//     * @return errorResponse
+//     */
+//    @ExceptionHandler({ConstraintViolationException.class,
+//            MissingServletRequestParameterException.class, MethodArgumentNotValidException.class})
+//    @ApiResponses(value = {
+//            @ApiResponse(responseCode = "400", description = "Bad Request",
+//                    content = {@Content(mediaType = APPLICATION_JSON_VALUE,
+//                            examples = @ExampleObject(
+//                                    name = "Handle exception when the data invalid. (@RequestBody, @RequestParam, @PathVariable)",
+//                                    summary = "Handle Bad Request",
+//                                    value = """
+//                                            {
+//                                                 "timestamp": "2024-04-07T11:38:56.368+00:00",
+//                                                 "status": 400,
+//                                                 "path": "/api/v1/...",
+//                                                 "error": "Invalid Payload",
+//                                                 "message": "{data} must be not blank"
+//                                             }
+//                                            """
+//                            ))})
+//
+//    })
+
+    @ExceptionHandler(BusinessException.class)
+    public ErrorResponse handleBusinessException(BusinessException e, WebRequest request) {
+
+        ErrorResponse errorResponse = new ErrorResponse();
+        errorResponse.setTimestamp(new Date());
+        errorResponse.setStatus(BAD_REQUEST.value());
+        errorResponse.setPath(request.getDescription(false).replace("uri=", ""));
+        errorResponse.setError("Business Error");
+        errorResponse.setMessage(e.getMessage());
+
+        return errorResponse;
+    }
+
     @ExceptionHandler({ConstraintViolationException.class,
             MissingServletRequestParameterException.class, MethodArgumentNotValidException.class})
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "400", description = "Bad Request",
-                    content = {@Content(mediaType = APPLICATION_JSON_VALUE,
-                            examples = @ExampleObject(
-                                    name = "Handle exception when the data invalid. (@RequestBody, @RequestParam, @PathVariable)",
-                                    summary = "Handle Bad Request",
-                                    value = """
-                                            {
-                                                 "timestamp": "2024-04-07T11:38:56.368+00:00",
-                                                 "status": 400,
-                                                 "path": "/api/v1/...",
-                                                 "error": "Invalid Payload",
-                                                 "message": "{data} must be not blank"
-                                             }
-                                            """
-                            ))})
-    })
     public ErrorResponse handleValidationException(Exception e, WebRequest request) {
+
         ErrorResponse errorResponse = new ErrorResponse();
         errorResponse.setTimestamp(new Date());
         errorResponse.setStatus(BAD_REQUEST.value());
         errorResponse.setPath(request.getDescription(false).replace("uri=", ""));
 
         String message = e.getMessage();
+
         if (e instanceof MethodArgumentNotValidException) {
-            int start = message.lastIndexOf("[") + 1;
-            int end = message.lastIndexOf("]") - 1;
-            message = message.substring(start, end);
             errorResponse.setError("Invalid Payload");
-            errorResponse.setMessage(message);
         } else if (e instanceof MissingServletRequestParameterException) {
-            errorResponse.setError("Invalid Parameter");
-            errorResponse.setMessage(message);
+            errorResponse.setError("Missing Parameter");
         } else if (e instanceof ConstraintViolationException) {
             errorResponse.setError("Invalid Parameter");
-            errorResponse.setMessage(message.substring(message.indexOf(" ") + 1));
         } else {
             errorResponse.setError("Invalid Data");
-            errorResponse.setMessage(message);
         }
+
+        errorResponse.setMessage(message);
 
         return errorResponse;
     }
