@@ -10,7 +10,6 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.util.List;
-import com.tour.core.dto.request.DepartureRequest;
 
 @Data
 @Builder

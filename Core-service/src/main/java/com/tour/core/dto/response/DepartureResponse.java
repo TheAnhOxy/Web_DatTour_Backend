@@ -26,6 +26,10 @@ public class DepartureResponse implements Serializable {
 
     private Integer bookedSlots;
 
+    private Long tourId;
+
+    private String tourTitle;
+
     private String pickupName;
 
     private String pickupAddress;
@@ -37,4 +41,6 @@ public class DepartureResponse implements Serializable {
     private LocalDateTime pickupTime;
 
     private String status;
+
+    private PriceConfigResponse priceConfig;
 }
