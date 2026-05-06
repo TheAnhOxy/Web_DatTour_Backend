@@ -60,9 +60,8 @@ public class DestinationServiceImpl implements DestinationService {
     public DestinationResponse create(DestinationRequest request) {
         Destination destination = modelMapper.map(request, Destination.class);
         Destination savedDestination = destinationRepository.save(destination);
-        log.info("Created destination - ID: {}, City: {}, Country: {}, By: {}", 
-                savedDestination.getId(), savedDestination.getCityName(), 
-                savedDestination.getCountry(), getCurrentUser());
+        log.info("Created destination - id={}, cityName={}, country={}, by={}", 
+            savedDestination.getId(), savedDestination.getCityName(), savedDestination.getCountry(), getCurrentUser());
         return modelMapper.map(savedDestination, DestinationResponse.class);
     }
 
@@ -75,9 +74,8 @@ public class DestinationServiceImpl implements DestinationService {
 
         modelMapper.map(request, destination);
         Destination savedDestination = destinationRepository.save(destination);
-        log.info("Updated destination - ID: {}, City: {}, Country: {}, By: {}", 
-                savedDestination.getId(), savedDestination.getCityName(), 
-                savedDestination.getCountry(), getCurrentUser());
+        log.info("Updated destination - id={}, cityName={}, country={}, by={}", 
+            savedDestination.getId(), savedDestination.getCityName(), savedDestination.getCountry(), getCurrentUser());
         return modelMapper.map(savedDestination, DestinationResponse.class);
     }
 
@@ -88,9 +86,8 @@ public class DestinationServiceImpl implements DestinationService {
         Destination destination = destinationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Điểm đến không tồn tại: " + id));
         destinationRepository.delete(destination);
-        log.info("Deleted destination - ID: {}, City: {}, Country: {}, By: {}", 
-                destination.getId(), destination.getCityName(), 
-                destination.getCountry(), getCurrentUser());
+        log.info("Deleted destination - id={}, cityName={}, country={}, by={}", 
+            destination.getId(), destination.getCityName(), destination.getCountry(), getCurrentUser());
     }
 
     private String getCurrentUser() {

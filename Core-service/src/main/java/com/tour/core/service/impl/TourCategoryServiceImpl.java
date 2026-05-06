@@ -56,7 +56,7 @@ public class TourCategoryServiceImpl implements TourCategoryService {
 
         TourCategory category = modelMapper.map(request, TourCategory.class);
         TourCategory savedCategory = tourCategoryRepository.save(category);
-        log.info("Created tour category - ID: {}, Name: {}, By: {}", savedCategory.getId(), savedCategory.getName(), getCurrentUser());
+        log.info("Created tour category - id={}, name={}, by={}", savedCategory.getId(), savedCategory.getName(), getCurrentUser());
         return modelMapper.map(savedCategory, CategoryResponse.class);
     }
 
@@ -73,7 +73,7 @@ public class TourCategoryServiceImpl implements TourCategoryService {
 
         modelMapper.map(request, category);
         TourCategory savedCategory = tourCategoryRepository.save(category);
-        log.info("Updated tour category - ID: {}, New Name: {}, By: {}", savedCategory.getId(), savedCategory.getName(), getCurrentUser());
+        log.info("Updated tour category - id={}, name={}, by={}", savedCategory.getId(), savedCategory.getName(), getCurrentUser());
         return modelMapper.map(savedCategory, CategoryResponse.class);
     }
 
@@ -84,7 +84,7 @@ public class TourCategoryServiceImpl implements TourCategoryService {
         TourCategory category = tourCategoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Danh mục không tồn tại: " + id));
         tourCategoryRepository.delete(category);
-        log.info("Deleted tour category - ID: {}, Name: {}, By: {}", category.getId(), category.getName(), getCurrentUser());
+        log.info("Deleted tour category - id={}, name={}, by={}", category.getId(), category.getName(), getCurrentUser());
     }
 
     @Override

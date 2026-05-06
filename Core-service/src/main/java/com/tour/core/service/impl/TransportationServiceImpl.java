@@ -55,7 +55,7 @@ public class TransportationServiceImpl implements TransportationService {
 
         Transportation transportation = modelMapper.map(request, Transportation.class);
         Transportation savedTransportation = transportationRepository.save(transportation);
-        log.info("Created transportation - ID: {}, Type: {}, By: {}", savedTransportation.getId(), savedTransportation.getType(), getCurrentUser());
+        log.info("Created transportation - id={}, type={}, by={}", savedTransportation.getId(), savedTransportation.getType(), getCurrentUser());
         return modelMapper.map(savedTransportation, TransportationResponse.class);
     }
 
@@ -72,7 +72,7 @@ public class TransportationServiceImpl implements TransportationService {
 
         modelMapper.map(request, transportation);
         Transportation savedTransportation = transportationRepository.save(transportation);
-        log.info("Updated transportation - ID: {}, New Type: {}, By: {}", savedTransportation.getId(), savedTransportation.getType(), getCurrentUser());
+        log.info("Updated transportation - id={}, type={}, by={}", savedTransportation.getId(), savedTransportation.getType(), getCurrentUser());
         return modelMapper.map(savedTransportation, TransportationResponse.class);
     }
 
@@ -83,7 +83,7 @@ public class TransportationServiceImpl implements TransportationService {
         Transportation transportation = transportationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Vận chuyển không tồn tại: " + id));
         transportationRepository.delete(transportation);
-        log.info("Deleted transportation - ID: {}, Type: {}, By: {}", transportation.getId(), transportation.getType(), getCurrentUser());
+        log.info("Deleted transportation - id={}, type={}, by={}", transportation.getId(), transportation.getType(), getCurrentUser());
     }
 
     private String getCurrentUser() {
