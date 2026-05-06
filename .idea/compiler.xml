@@ -10,52 +10,20 @@
         <module name="Booking-service" />
         <module name="Identity-Service" />
       </profile>
-      <profile name="Annotation profile for Notification-service" enabled="true">
-        <sourceOutputDir name="target/generated-sources/annotations" />
-        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
-        <outputRelativeToContentRoot value="true" />
-        <processorPath useClasspath="false">
-          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.30/lombok-1.18.30.jar" />
-        </processorPath>
-        <module name="Core-service" />
-      </profile>
       <profile name="Annotation profile for Web_DatTour_Backend" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <processorPath useClasspath="false">
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.30/lombok-1.18.30.jar" />
-          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.30/lombok-1.18.30.jar" />
         </processorPath>
-        <module name="api-gateway" />
-        <module name="Payment-service" />
-      </profile>
-      <profile name="Annotation profile for Search-service" enabled="true">
-        <sourceOutputDir name="target/generated-sources/annotations" />
-        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
-        <outputRelativeToContentRoot value="true" />
-        <processorPath useClasspath="false">
-          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.30/lombok-1.18.30.jar" />
-        </processorPath>
-        <module name="Search-service" />
-      </profile>
-      <profile name="Annotation profile for Support-service" enabled="true">
-        <sourceOutputDir name="target/generated-sources/annotations" />
-        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
-        <outputRelativeToContentRoot value="true" />
-        <processorPath useClasspath="false">
-          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.30/lombok-1.18.30.jar" />
-        </processorPath>
+        <module name="Notification-service" />
         <module name="Support-service" />
-      </profile>
-      <profile name="Annotation profile for Notification-Service" enabled="true">
-        <sourceOutputDir name="target/generated-sources/annotations" />
-        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
-        <outputRelativeToContentRoot value="true" />
-        <processorPath useClasspath="false">
-          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.30/lombok-1.18.30.jar" />
-        </processorPath>
+        <module name="Core-service" />
+        <module name="api-gateway" />
         <module name="Notification-Service" />
+        <module name="Search-service" />
+        <module name="Payment-service" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
@@ -69,10 +37,12 @@
       <module name="Identity-Service" options="-parameters" />
       <module name="MiniFood_System_Backend" options="-parameters" />
       <module name="Notification-Service" options="-parameters" />
+      <module name="Notification-service" options="-parameters" />
       <module name="Payment-service" options="-parameters" />
       <module name="Search-service" options="-parameters" />
       <module name="Support-service" options="-parameters" />
       <module name="User-service (1)" options="-parameters" />
+      <module name="Web_DatTour_Backend" options="-parameters" />
       <module name="api-gateway" options="-parameters" />
     </option>
   </component>
