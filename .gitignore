@@ -1,3 +1,7 @@
-target/
+# IDE
 .idea/
 *.iml
+
+# Build outputs
+target/
+**/target/
