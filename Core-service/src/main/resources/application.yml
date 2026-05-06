@@ -4,6 +4,12 @@ server:
 spring:
   application:
     name: core-service
+  cache:
+    type: redis
+  data:
+    redis:
+      host: localhost
+      port: 6379
 
   profiles:
     active: dev
@@ -22,6 +28,7 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
         jdbc:
           lob:
             non_contextual_creation: true
@@ -50,3 +57,6 @@ springdoc:
     path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
+
+jwt:
+  signerKey: my-super-secret-key-that-is-at-least-64-bytes-long-1234567890-abcdef
