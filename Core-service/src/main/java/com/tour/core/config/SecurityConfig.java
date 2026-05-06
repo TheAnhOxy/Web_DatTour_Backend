@@ -39,7 +39,6 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.POST, "/api/wishlists/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF", "ROLE_CUSTOMER")
                     .requestMatchers(HttpMethod.DELETE, "/api/wishlists/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF", "ROLE_CUSTOMER")
                     .requestMatchers(HttpMethod.GET, "/api/wishlists/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF", "ROLE_CUSTOMER")
-                    .requestMatchers(HttpMethod.GET, "/api/**").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
                     .requestMatchers(HttpMethod.PUT, "/api/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
                     .requestMatchers(HttpMethod.DELETE, "/api/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
