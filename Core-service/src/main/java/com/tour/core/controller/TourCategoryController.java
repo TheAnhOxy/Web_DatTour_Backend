@@ -15,7 +15,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/categories")
-@Tag(name = "Tour Category")
+@Tag(name = "Tour Category", description = "Quản lý danh mục tour")
 @RequiredArgsConstructor
 public class TourCategoryController {
 
