@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/transportations")
+@RequestMapping("/core/transportations")
 @Tag(name = "Transportation", description = "Quản lý phương tiện vận chuyển")
 @RequiredArgsConstructor
 public class TransportationController {

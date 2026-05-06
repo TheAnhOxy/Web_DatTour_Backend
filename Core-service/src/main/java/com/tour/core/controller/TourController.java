@@ -14,7 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/tours")
+@RequestMapping("/core/tours")
 @Tag(name = "Tour", description = "Quản lý tour")
 @RequiredArgsConstructor
 public class TourController {

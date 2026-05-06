@@ -20,7 +20,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/promotions")
+@RequestMapping("/core/promotions")
 @Tag(name = "Promotion", description = "Quản lý mã khuyến mãi")
 @RequiredArgsConstructor
 @Validated

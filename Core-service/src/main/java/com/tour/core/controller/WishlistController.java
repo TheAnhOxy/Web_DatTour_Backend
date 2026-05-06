@@ -21,7 +21,7 @@ import com.tour.core.exception.ForBiddenException;
 import com.tour.core.exception.InvalidDataException;
 
 @RestController
-@RequestMapping("/api/wishlists")
+@RequestMapping("/core/wishlists")
 @RequiredArgsConstructor
 @Tag(name = "Wishlist", description = "Quản lý danh sách yêu thích của người dùng")
 @Validated

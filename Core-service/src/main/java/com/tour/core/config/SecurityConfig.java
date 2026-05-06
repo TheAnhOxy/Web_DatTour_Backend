@@ -35,14 +35,14 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(request -> request
                     .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/actuator/**").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/tours/admin").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
+                    .requestMatchers(HttpMethod.GET, "/core/tours/admin").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
                     // wishlist endpoints: customers may manage their wishlist
-                    .requestMatchers(HttpMethod.POST, "/api/wishlists/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF", "ROLE_CUSTOMER")
-                    .requestMatchers(HttpMethod.DELETE, "/api/wishlists/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF", "ROLE_CUSTOMER")
-                    .requestMatchers(HttpMethod.GET, "/api/wishlists/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF", "ROLE_CUSTOMER")
-                    .requestMatchers(HttpMethod.POST, "/api/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
-                    .requestMatchers(HttpMethod.PUT, "/api/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
-                    .requestMatchers(HttpMethod.DELETE, "/api/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
+                    .requestMatchers(HttpMethod.POST, "/core/wishlists/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF", "ROLE_CUSTOMER")
+                    .requestMatchers(HttpMethod.DELETE, "/core/wishlists/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF", "ROLE_CUSTOMER")
+                    .requestMatchers(HttpMethod.GET, "/core/wishlists/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF", "ROLE_CUSTOMER")
+                    .requestMatchers(HttpMethod.POST, "/core/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
+                    .requestMatchers(HttpMethod.PUT, "/core/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
+                    .requestMatchers(HttpMethod.DELETE, "/core/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
                     .anyRequest().authenticated()
                 )
                 .exceptionHandling(exception -> exception

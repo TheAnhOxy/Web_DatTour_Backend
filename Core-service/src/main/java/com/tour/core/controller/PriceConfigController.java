@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
-@RequestMapping("/api/departures/{departureId}/price-config")
+@RequestMapping("/core/departures/{departureId}/price-config")
 @Tag(name = "Price Config", description = "Quản lý cấu hình giá cho lịch khởi hành")
 @RequiredArgsConstructor
 @Validated

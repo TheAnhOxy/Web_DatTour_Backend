@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/categories")
+@RequestMapping("/core/categories")
 @Tag(name = "Tour Category", description = "Quản lý danh mục tour")
 @RequiredArgsConstructor
 public class TourCategoryController {

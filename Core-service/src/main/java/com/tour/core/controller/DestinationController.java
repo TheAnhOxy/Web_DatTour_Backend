@@ -13,7 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/destinations")
+@RequestMapping("/core/destinations")
 @Tag(name = "Destination", description = "Quản lý điểm đến")
 @RequiredArgsConstructor
 public class DestinationController {
