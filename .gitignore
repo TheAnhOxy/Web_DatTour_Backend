@@ -5,3 +5,4 @@
 # Build outputs
 target/
 **/target/
+target
