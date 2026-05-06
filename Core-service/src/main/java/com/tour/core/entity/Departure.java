@@ -23,5 +23,21 @@ public class Departure {
     private Integer maxSlots;
     private Integer bookedSlots;
 
+    // Thông tin điểm đón 
+    @Column(name = "pickup_name")
+    private String pickupName;
+
+    @Column(name = "pickup_address", columnDefinition = "text")
+    private String pickupAddress;
+
+    @Column(name = "pickup_latitude")
+    private Double pickupLatitude;
+
+    @Column(name = "pickup_longitude")
+    private Double pickupLongitude;
+
+    @Column(name = "pickup_time")
+    private LocalDateTime pickupTime;
+
     private String status;
 }
