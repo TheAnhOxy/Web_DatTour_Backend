@@ -1,7 +1,13 @@
 package com.tour.booking.controller;
 
 
+import com.tour.booking.dto.request.BookingRequest;
+import com.tour.booking.dto.response.ApiResponse;
+import com.tour.booking.dto.response.BookingResponse;
+import com.tour.booking.service.BookingService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -9,6 +15,18 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class BookingController {
 
+    private final BookingService bookingService;
+
+    @PostMapping("/create")
+    public ApiResponse createBooking(@RequestBody BookingRequest request) {
+        BookingResponse response = bookingService.createBooking(request);
+
+        return ApiResponse.builder()
+                .status(HttpStatus.CREATED.value())
+                .message("Giữ chỗ thành công! Vui lòng thanh toán trong vòng 10 phút.")
+                .data(response)
+                .build();
+    }
 
     @GetMapping
     public String getHello(){

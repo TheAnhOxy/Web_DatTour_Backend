@@ -1,0 +1,9 @@
+server:
+  port: 8761
+
+eureka:
+  client:
+    register-with-eureka: false # Server không cần tự đăng ký chính nó
+    fetch-registry: false       # Server không cần lấy danh sách từ nơi khác
+  instance:
+    hostname: localhost

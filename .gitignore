@@ -5,6 +5,3 @@
 # Build outputs
 target/
 **/target/
-target
-target
-.idea
