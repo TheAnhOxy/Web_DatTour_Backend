@@ -1,6 +1,7 @@
 package com.tour.booking.repository;
 
 import com.tour.booking.entity.Booking;
+import com.tour.booking.entity.Passenger;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -12,4 +13,5 @@ import java.util.Optional;
 public interface BookingRepository extends JpaRepository<Booking, Long> {
     Optional<Booking> findByBookingCode(String bookingCode);
     List<Booking> findByStatusAndCreatedAtBefore(String status, LocalDateTime time);
+
 }

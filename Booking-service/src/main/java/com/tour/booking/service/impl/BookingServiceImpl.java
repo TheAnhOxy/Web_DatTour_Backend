@@ -3,9 +3,11 @@ package com.tour.booking.service.impl;
 import com.tour.booking.client.CoreClient;
 import com.tour.booking.dto.PassengerDTO;
 import com.tour.booking.dto.request.BookingRequest;
+import com.tour.booking.dto.request.CancelBookingRequest;
 import com.tour.booking.dto.response.ApiResponse;
 import com.tour.booking.dto.response.BookingResponse;
 import com.tour.booking.entity.Booking;
+import com.tour.booking.entity.Cancellation;
 import com.tour.booking.entity.Passenger;
 import com.tour.booking.exception.BusinessException;
 import com.tour.booking.repository.BookingRepository;
@@ -21,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -89,6 +92,7 @@ public class BookingServiceImpl implements BookingService {
 
             Booking booking = Booking.builder()
                     .bookingCode("BK" + System.nanoTime())
+
                     .userId(request.getUserId())
                     .departureId(request.getDepartureId())
                     .status("PENDING")
@@ -185,6 +189,41 @@ public class BookingServiceImpl implements BookingService {
                     });
         } catch (KafkaException ex) {
             log.warn("Kafka không khả dụng, bỏ qua event booking {}: {}", booking.getBookingCode(), ex.getMessage());
+        }
+    }
+    @Transactional
+    @Override
+    public void cancelBooking(CancelBookingRequest request) {
+        Booking booking = bookingRepository.findByBookingCode(request.getBookingCode())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng: " + request.getBookingCode()));
+
+        // 1. Kiểm tra trạng thái: Đã hủy rồi thì không hủy nữa
+        if ("CANCELLED".equals(booking.getStatus()) || "CANCELLED_TIMEOUT".equals(booking.getStatus())) {
+            throw new RuntimeException("Đơn hàng này đã được hủy trước đó!");
+        }
+        Cancellation cancellation = Cancellation.builder()
+                .reason(request.getReason())
+                .cancelledAt(LocalDateTime.now())
+                .booking(booking)
+                .build();
+
+        booking.setCancellation(cancellation);
+
+        // 2. Cập nhật Status & Lý do
+        booking.setStatus("CANCELLED");
+        booking.setCancellation(cancellation);
+        bookingRepository.save(booking);
+
+        // 3. Hoàn trả Slot trên Redis (Dùng logic an toàn parseInt)
+        String slotKey = "SLOTS_" + booking.getDepartureId();
+        RBucket<Object> bucket = redissonClient.getBucket(slotKey);
+
+        if (bucket.isExists()) {
+            int currentSlots = Integer.parseInt(bucket.get().toString());
+            int restoredSlots = currentSlots + booking.getPassengers().size();
+            bucket.set(restoredSlots);
+            log.info("=> [CANCEL] Đã hoàn trả {} chỗ. Slot hiện tại trên Redis: {}",
+                    booking.getPassengers().size(), restoredSlots);
         }
     }
 }
