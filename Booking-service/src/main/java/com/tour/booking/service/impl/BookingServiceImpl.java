@@ -111,12 +111,12 @@ public class BookingServiceImpl implements BookingService {
             // Cập nhật Redis ngay lập tức để giữ chỗ
             bucket.set(availableSlots - passengers.size());
 
-            // Bước 6: Lưu DB & Gửi Kafka
+            //  Lưu DB & Gửi Kafka
             Booking saved = bookingRepository.save(booking);
 
             publishBookingCreatedEvent(saved);
 
-            // Bước 7: Trả về chi tiết (Gọi hàm buildDetailedResponse)
+            // Trả về chi tiết (Gọi hàm buildDetailedResponse)
             return buildDetailedResponse(saved, request.getPassengers(), priceConfig);
 
         } catch (InterruptedException e) {

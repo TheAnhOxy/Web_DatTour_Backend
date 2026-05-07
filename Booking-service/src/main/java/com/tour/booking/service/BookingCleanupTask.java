@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Component
 @RequiredArgsConstructor
@@ -22,6 +23,7 @@ public class BookingCleanupTask {
     private final RedissonClient redissonClient;
 
     // Chạy định kỳ mỗi 30 giây
+//    @Scheduled(fixedDelay = 10, timeUnit = TimeUnit.MINUTES) // 10p
     @Scheduled(fixedRate = 30000)
     @Transactional
     public void handleTimeoutBookings() {
@@ -38,11 +40,11 @@ public class BookingCleanupTask {
 
         for (Booking booking : expiredBookings) {
             try {
-                // 1. Cập nhật trạng thái thành CANCELLED
+                // Cập nhật trạng thái thành CANCELLED
                 booking.setStatus("CANCELLED_TIMEOUT");
                 bookingRepository.save(booking);
 
-                // 2. Trả lại slot vào Redis
+                // Trả lại slot vào Redis
                 String slotKey = "SLOTS_" + booking.getDepartureId();
 
                 RBucket<Object> bucket = redissonClient.getBucket(slotKey);
