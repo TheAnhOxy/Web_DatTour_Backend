@@ -7,5 +7,6 @@ public interface PaymentService {
     PaymentResponse getPaymentByBookingId(Long bookingId);
 
     PaymentResponse getPaymentByTransactionId(String transactionId);
+    void processCallback(String transactionId, String status);
 
 }

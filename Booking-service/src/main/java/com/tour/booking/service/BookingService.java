@@ -8,5 +8,6 @@ public interface BookingService {
 
     BookingResponse createBooking(BookingRequest request);
     void cancelBooking(CancelBookingRequest request);
+    BookingResponse getBookingByCode(String bookingCode);
 
 }

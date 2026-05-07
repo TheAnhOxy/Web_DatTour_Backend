@@ -38,6 +38,17 @@ public class BookingController {
                 .build();
     }
 
+    @GetMapping("/{bookingCode}")
+    public ApiResponse getByCode(@PathVariable String bookingCode) {
+        BookingResponse response = bookingService.getBookingByCode(bookingCode);
+
+        return ApiResponse.builder()
+                .status(200)
+                .message("Lấy chi tiết đơn hàng thành công")
+                .data(response)
+                .build();
+    }
+
     @GetMapping
     public String getHello(){
         return "hello bookings";

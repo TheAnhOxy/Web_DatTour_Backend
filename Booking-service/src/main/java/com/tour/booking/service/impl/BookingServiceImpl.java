@@ -178,17 +178,23 @@ public class BookingServiceImpl implements BookingService {
 
     private void publishBookingCreatedEvent(Booking booking) {
         try {
-            kafkaTemplate.send("booking-created-topic", booking.getBookingCode())
-                    .whenComplete((result, ex) -> {
-                        if (ex != null) {
-                            log.warn("Kafka không khả dụng, bỏ qua event booking {}: {}", booking.getBookingCode(), ex.getMessage());
-                            return;
-                        }
+            // Đóng gói dữ liệu đầy đủ để Payment Service không bị thiếu ID
+            Map<String, Object> message = Map.of(
+                    "bookingId", booking.getId(),
+                    "bookingCode", booking.getBookingCode(),
+                    "totalAmount", booking.getTotalAmount()
+            );
 
-                        log.info("Đã publish event booking-created-topic cho booking {}", booking.getBookingCode());
+            kafkaTemplate.send("booking-created-topic", message)
+                    .whenComplete((result, ex) -> {
+                        if (ex == null) {
+                            log.info("=> [Kafka] Đã gửi thông tin Booking: {}", booking.getBookingCode());
+                        } else {
+                            log.error("=> [Kafka] Lỗi gửi tin nhắn: {}", ex.getMessage());
+                        }
                     });
-        } catch (KafkaException ex) {
-            log.warn("Kafka không khả dụng, bỏ qua event booking {}: {}", booking.getBookingCode(), ex.getMessage());
+        } catch (Exception ex) {
+            log.warn("Kafka Error: {}", ex.getMessage());
         }
     }
     @Transactional
@@ -225,5 +231,28 @@ public class BookingServiceImpl implements BookingService {
             log.info("=> [CANCEL] Đã hoàn trả {} chỗ. Slot hiện tại trên Redis: {}",
                     booking.getPassengers().size(), restoredSlots);
         }
+    }
+
+    @Override
+    public BookingResponse getBookingByCode(String bookingCode) {
+        // 1. Tìm đơn hàng
+        Booking booking = bookingRepository.findByBookingCode(bookingCode)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy đơn hàng: " + bookingCode));
+
+        // 2. Lấy lại priceConfig từ snapshot đã lưu trong DB
+        Map<String, Object> priceConfig = (Map<String, Object>) booking.getPriceSnapshot().get("priceConfig");
+
+        // 3. Map từ Entity sang DTO bằng hàm helper đã có
+        // Vì buildDetailedResponse yêu cầu List<PassengerDTO>, ta có thể map từ List<Passenger> sang
+        return BookingResponse.builder()
+                .bookingCode(booking.getBookingCode())
+                .status(booking.getStatus())
+                .totalAmount(booking.getTotalAmount())
+                .createdAt(booking.getCreatedAt())
+                .tourTitle((String) booking.getPriceSnapshot().get("tourTitle"))
+                .startDate(String.valueOf(booking.getPriceSnapshot().get("startDate")))
+                .priceDetail(priceConfig)
+                .message("Lấy thông tin đơn hàng thành công")
+                .build();
     }
 }

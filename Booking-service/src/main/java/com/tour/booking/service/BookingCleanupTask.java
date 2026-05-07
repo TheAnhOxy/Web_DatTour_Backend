@@ -23,8 +23,8 @@ public class BookingCleanupTask {
     private final RedissonClient redissonClient;
 
     // Chạy định kỳ mỗi 30 giây
-//    @Scheduled(fixedDelay = 10, timeUnit = TimeUnit.MINUTES) // 10p
-    @Scheduled(fixedRate = 30000)
+    @Scheduled(fixedDelay = 10, timeUnit = TimeUnit.MINUTES) // 10p
+//    @Scheduled(fixedRate = 30000)
     @Transactional
     public void handleTimeoutBookings() {
         // Mốc thời gian: Hiện tại trừ đi 1 phút
