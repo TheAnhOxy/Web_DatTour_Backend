@@ -2,6 +2,7 @@ package com.tour.booking.controller;
 
 
 import com.tour.booking.dto.request.BookingRequest;
+import com.tour.booking.dto.request.CancelBookingRequest;
 import com.tour.booking.dto.response.ApiResponse;
 import com.tour.booking.dto.response.BookingResponse;
 import com.tour.booking.service.BookingService;
@@ -24,6 +25,26 @@ public class BookingController {
         return ApiResponse.builder()
                 .status(HttpStatus.CREATED.value())
                 .message("Giữ chỗ thành công! Vui lòng thanh toán trong vòng 10 phút.")
+                .data(response)
+                .build();
+    }
+
+    @PostMapping("/cancel")
+    public ApiResponse cancel(@RequestBody CancelBookingRequest request) {
+        bookingService.cancelBooking(request);
+        return ApiResponse.builder()
+                .status(200)
+                .message("Hủy đơn hàng thành công")
+                .build();
+    }
+
+    @GetMapping("/{bookingCode}")
+    public ApiResponse getByCode(@PathVariable String bookingCode) {
+        BookingResponse response = bookingService.getBookingByCode(bookingCode);
+
+        return ApiResponse.builder()
+                .status(200)
+                .message("Lấy chi tiết đơn hàng thành công")
                 .data(response)
                 .build();
     }

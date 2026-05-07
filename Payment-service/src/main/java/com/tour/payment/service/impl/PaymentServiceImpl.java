@@ -7,7 +7,11 @@ import com.tour.payment.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -16,6 +20,8 @@ public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final ModelMapper modelMapper;
+
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     public PaymentResponse getPaymentByBookingId(Long bookingId) {
         Payment payment = paymentRepository.findByBookingId(bookingId)
@@ -29,6 +35,22 @@ public class PaymentServiceImpl implements PaymentService {
                 .orElseThrow(() -> new RuntimeException("Mã giao dịch không tồn tại!"));
 
         return modelMapper.map(payment, PaymentResponse.class);
+    }
+
+    @Override
+    @Transactional
+    public void processCallback(String txnRef, String status) {
+        Payment payment = paymentRepository.findByTransactionId(txnRef)
+                .orElseThrow(() -> new RuntimeException("Giao dịch không tồn tại"));
+
+        payment.setStatus(status);
+        payment.setPaidAt(LocalDateTime.now());
+        paymentRepository.save(payment);
+
+        if ("SUCCESS".equals(status)) {
+            kafkaTemplate.send("payment-completed-topic", txnRef);
+            log.info("=> [Kafka] Đã báo SUCCESS cho đơn: {}", txnRef);
+        }
     }
 
 

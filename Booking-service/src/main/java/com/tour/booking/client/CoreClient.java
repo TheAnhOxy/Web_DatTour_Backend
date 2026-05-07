@@ -1,13 +1,14 @@
-//package com.tour.booking.client;
-//
-//import org.springframework.cloud.openfeign.FeignClient;
-//import org.springframework.web.bind.annotation.GetMapping;
-//import org.springframework.web.bind.annotation.PathVariable;
-//
-//import java.math.BigDecimal;
-//
-//@FeignClient(name = "core-service")
-//public interface CoreClient {
-//    @GetMapping("/cores/departures/{id}/price")
-//    BigDecimal getDeparturePrice(@PathVariable("id") Long id);
-//}
+package com.tour.booking.client;
+
+import com.tour.booking.dto.response.ApiResponse;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+
+import java.math.BigDecimal;
+
+@FeignClient(name = "core-service")
+public interface CoreClient {
+    @GetMapping("/core/departures/{id}")
+    ApiResponse getDepartureDetails(@PathVariable("id") Long id); // Phải trả về ApiResponse
+}
