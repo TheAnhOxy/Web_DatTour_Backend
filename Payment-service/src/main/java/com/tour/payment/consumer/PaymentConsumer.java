@@ -23,13 +23,13 @@ public class PaymentConsumer {
     public void handleBookingCreated(Map<String, Object> message) {
         String bookingCode = message.get("bookingCode").toString();
 
-        // 1. Kiểm tra phương thức thanh toán (VD: mặc định lấy VNPAY id=1)
+        //  Kiểm tra phương thức thanh toán (VD: mặc định lấy VNPAY id=1)
         PaymentMethod method = methodRepository.findById(1L)
                 .filter(PaymentMethod::getIsActive)
                 .orElseThrow(() -> new RuntimeException("Phương thức thanh toán chưa kích hoạt!"));
 
         if (paymentRepository.findByTransactionId(bookingCode).isEmpty()) {
-            // 2. Giả lập tạo URL thanh toán
+            // Giả lập tạo URL thanh toán
             String fakeUrl = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?order=" + bookingCode;
 
             Payment payment = Payment.builder()
@@ -39,7 +39,7 @@ public class PaymentConsumer {
                     .status("PENDING")
                     .gateway("VNPAY")
                     .paymentMethod(method)
-                    .paymentUrl(fakeUrl) // Gán URL vào đây
+                    .paymentUrl(fakeUrl)
                     .build();
 
             paymentRepository.save(payment);

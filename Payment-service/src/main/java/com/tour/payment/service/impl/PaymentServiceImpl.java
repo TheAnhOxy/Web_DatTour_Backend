@@ -48,7 +48,6 @@ public class PaymentServiceImpl implements PaymentService {
         paymentRepository.save(payment);
 
         if ("SUCCESS".equals(status)) {
-            // Gửi tin nhắn String thuần túy để tránh lỗi ngoặc kép
             kafkaTemplate.send("payment-completed-topic", txnRef);
             log.info("=> [Kafka] Đã báo SUCCESS cho đơn: {}", txnRef);
         }
