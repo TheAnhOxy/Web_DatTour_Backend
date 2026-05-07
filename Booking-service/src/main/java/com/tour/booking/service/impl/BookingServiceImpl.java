@@ -45,13 +45,13 @@ public class BookingServiceImpl implements BookingService {
         RLock lock = redissonClient.getLock(lockKey);
 
         try {
-            // Bước 1: Giữ Distributed Lock để chống Overbooking tuyệt đối
+            //  Giữ Distributed Lock để chống Overbooking tuyệt đối
             boolean isLocked = lock.tryLock(3, 10, TimeUnit.SECONDS);
             if (!isLocked) {
                 throw new BusinessException("Hệ thống đang bận xử lý lượt đặt chỗ này, vui lòng thử lại sau!");
             }
 
-            // Bước 2: Lấy dữ liệu từ Core Service
+            //  Lấy dữ liệu từ Core Service
             ApiResponse coreResponse = coreClient.getDepartureDetails(request.getDepartureId());
             if (coreResponse == null || coreResponse.getStatus() != 200 || coreResponse.getData() == null) {
                 throw new BusinessException("Không tìm thấy thông tin lịch khởi hành!");
@@ -59,17 +59,15 @@ public class BookingServiceImpl implements BookingService {
             Map<String, Object> departureData = (Map<String, Object>) coreResponse.getData();
             Map<String, Object> priceConfig = (Map<String, Object>) departureData.get("priceConfig");
 
-            // Bước 3: Check Slot (Redis First)
+            // Check Slot (Redis First)
             String slotKey = "SLOTS_" + request.getDepartureId();
-            RBucket<Object> bucket = redissonClient.getBucket(slotKey); // Để Object cho an toàn
+            RBucket<Object> bucket = redissonClient.getBucket(slotKey);
             Object bucketValue = bucket.get();
 
             Integer availableSlots;
 
             if (bucketValue == null) {
                 log.info("Redis chưa có slot, tiến hành sync từ Core Service");
-
-                // Dùng cách này để tránh lỗi Cast từ String sang Integer
                 int max = Integer.parseInt(departureData.get("maxSlots").toString());
 
                 int booked = departureData.get("bookedSlots") != null
@@ -79,7 +77,6 @@ public class BookingServiceImpl implements BookingService {
                 availableSlots = max - booked;
                 bucket.set(availableSlots);
             } else {
-                // Ép kiểu an toàn từ dữ liệu lấy trong Redis ra
                 availableSlots = Integer.parseInt(bucketValue.toString());
             }
 
@@ -87,7 +84,7 @@ public class BookingServiceImpl implements BookingService {
                 throw new BusinessException("Xin lỗi, tour này không còn đủ chỗ trống!");
             }
 
-            // Bước 4: Tính tiền & Tạo Booking Entity
+            //Tính tiền & Tạo Booking Entity
             BigDecimal totalAmount = calculateTotal(request.getPassengers(), priceConfig);
 
             Booking booking = Booking.builder()
@@ -203,7 +200,7 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findByBookingCode(request.getBookingCode())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng: " + request.getBookingCode()));
 
-        // 1. Kiểm tra trạng thái: Đã hủy rồi thì không hủy nữa
+        // Kiểm tra trạng thái: Đã hủy rồi thì không hủy nữa
         if ("CANCELLED".equals(booking.getStatus()) || "CANCELLED_TIMEOUT".equals(booking.getStatus())) {
             throw new RuntimeException("Đơn hàng này đã được hủy trước đó!");
         }
@@ -214,13 +211,11 @@ public class BookingServiceImpl implements BookingService {
                 .build();
 
         booking.setCancellation(cancellation);
-
-        // 2. Cập nhật Status & Lý do
         booking.setStatus("CANCELLED");
         booking.setCancellation(cancellation);
         bookingRepository.save(booking);
 
-        // 3. Hoàn trả Slot trên Redis (Dùng logic an toàn parseInt)
+        //  Hoàn trả Slot trên Redis
         String slotKey = "SLOTS_" + booking.getDepartureId();
         RBucket<Object> bucket = redissonClient.getBucket(slotKey);
 
@@ -235,15 +230,12 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public BookingResponse getBookingByCode(String bookingCode) {
-        // 1. Tìm đơn hàng
         Booking booking = bookingRepository.findByBookingCode(bookingCode)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đơn hàng: " + bookingCode));
 
-        // 2. Lấy lại priceConfig từ snapshot đã lưu trong DB
+        //  Lấy lại priceConfig từ snapshot đã lưu trong DB
         Map<String, Object> priceConfig = (Map<String, Object>) booking.getPriceSnapshot().get("priceConfig");
 
-        // 3. Map từ Entity sang DTO bằng hàm helper đã có
-        // Vì buildDetailedResponse yêu cầu List<PassengerDTO>, ta có thể map từ List<Passenger> sang
         return BookingResponse.builder()
                 .bookingCode(booking.getBookingCode())
                 .status(booking.getStatus())
