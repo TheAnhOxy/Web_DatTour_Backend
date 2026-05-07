@@ -27,6 +27,8 @@ import com.tour.core.util.SlugUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.redisson.api.RBucket;
+import org.redisson.api.RedissonClient;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -54,6 +56,7 @@ public class TourServiceImpl implements TourService {
     private final DestinationRepository destinationRepository;
     private final DepartureRepository departureRepository;
     private final ModelMapper modelMapper;
+    private final RedissonClient redissonClient;
 
     @Override
     @Cacheable(value = "tours", key = "'customer:' + (#categoryId == null ? 'ALL' : #categoryId) + ':' + (#isHot == null ? 'ALL' : #isHot) + ':' + #page + ':' + #size")
@@ -175,18 +178,21 @@ public class TourServiceImpl implements TourService {
     }
 
     private void saveDepartures(Tour tour, List<DepartureRequest> departureRequests) {
-        if (departureRequests == null || departureRequests.isEmpty()) {
-            return;
-        }
+        if (departureRequests == null || departureRequests.isEmpty()) return;
 
-        List<Departure> departures = new ArrayList<>();
-        for (DepartureRequest dr : departureRequests) {
-            Departure d = modelMapper.map(dr, Departure.class);
-            d.setTour(tour);
-            departures.add(d);
-        }
+        List<Departure> departures = departureRequests.stream()
+                .map(dr -> {
+                    Departure d = modelMapper.map(dr, Departure.class);
+                    d.setTour(tour);
+                    d.setBookedSlots(0);
+                    return d;
+                }).collect(Collectors.toList());
 
-        departureRepository.saveAll(departures);
+        List<Departure> savedDeps = departureRepository.saveAll(departures);
+        tour.setDepartures(savedDeps);
+        savedDeps.forEach(sd -> {
+            redissonClient.getBucket("SLOTS_" + sd.getId()).set(sd.getMaxSlots());
+        });
     }
 
     @Override

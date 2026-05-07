@@ -34,17 +34,57 @@ public class SecurityConfig {
         http.csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(request -> request
-                    .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/actuator/**").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/core/tours/admin").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
-                    // wishlist endpoints: customers may manage their wishlist
-                    .requestMatchers(HttpMethod.POST, "/core/wishlists/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF", "ROLE_CUSTOMER")
-                    .requestMatchers(HttpMethod.DELETE, "/core/wishlists/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF", "ROLE_CUSTOMER")
-                    .requestMatchers(HttpMethod.GET, "/core/wishlists/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF", "ROLE_CUSTOMER")
-                    .requestMatchers(HttpMethod.POST, "/core/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
-                    .requestMatchers(HttpMethod.PUT, "/core/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
-                    .requestMatchers(HttpMethod.DELETE, "/core/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
-                    .anyRequest().authenticated()
+
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**",
+                                "/actuator/**"
+                        ).permitAll()
+
+                        // PUBLIC APIs
+                        .requestMatchers(HttpMethod.GET,
+                                "/core/tours",
+                                "/core/tours/**",
+                                "/core/departures/**"
+                        ).permitAll()
+
+                        // ADMIN
+                        .requestMatchers(HttpMethod.GET, "/core/tours/admin")
+                        .hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
+
+                        // WISHLIST
+                        .requestMatchers(HttpMethod.POST, "/core/wishlists/**")
+                        .hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF", "ROLE_CUSTOMER")
+
+                        .requestMatchers(HttpMethod.DELETE, "/core/wishlists/**")
+                        .hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF", "ROLE_CUSTOMER")
+
+                        .requestMatchers(HttpMethod.GET, "/core/wishlists/**")
+                        .hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF", "ROLE_CUSTOMER")
+
+                        // WRITE APIs
+                        .requestMatchers(HttpMethod.POST, "/core/**").permitAll()
+
+                        .requestMatchers(HttpMethod.PUT, "/core/**").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/core/**")
+                        .hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
+
+                        .anyRequest().authenticated()
                 )
+//                .authorizeHttpRequests(request -> request
+//                    .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/actuator/**").permitAll()
+//                    .requestMatchers(HttpMethod.GET, "/core/tours/admin").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
+//                    // wishlist endpoints: customers may manage their wishlist
+//                    .requestMatchers(HttpMethod.POST, "/core/wishlists/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF", "ROLE_CUSTOMER")
+//                    .requestMatchers(HttpMethod.DELETE, "/core/wishlists/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF", "ROLE_CUSTOMER")
+//                    .requestMatchers(HttpMethod.GET, "/core/wishlists/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF", "ROLE_CUSTOMER")
+//                    .requestMatchers(HttpMethod.POST, "/core/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF", "ROLE_CUSTOMER")
+//                    .requestMatchers(HttpMethod.PUT, "/core/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
+//                    .requestMatchers(HttpMethod.DELETE, "/core/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
+//                        .requestMatchers("/core/departures/**").permitAll()
+//                    .anyRequest().authenticated()
+//                )
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setStatus(HttpStatus.UNAUTHORIZED.value());
