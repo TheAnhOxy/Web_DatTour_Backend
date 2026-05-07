@@ -58,14 +58,26 @@ public class BookingServiceImpl implements BookingService {
 
             // Bước 3: Check Slot (Redis First)
             String slotKey = "SLOTS_" + request.getDepartureId();
-            RBucket<Integer> bucket = redissonClient.getBucket(slotKey);
-            Integer availableSlots = bucket.get();
+            RBucket<Object> bucket = redissonClient.getBucket(slotKey); // Để Object cho an toàn
+            Object bucketValue = bucket.get();
 
-            if (availableSlots == null) {
-                int max = ((Number) departureData.get("maxSlots")).intValue();
-                int booked = departureData.get("bookedSlots") != null ? ((Number) departureData.get("bookedSlots")).intValue() : 0;
+            Integer availableSlots;
+
+            if (bucketValue == null) {
+                log.info("Redis chưa có slot, tiến hành sync từ Core Service");
+
+                // Dùng cách này để tránh lỗi Cast từ String sang Integer
+                int max = Integer.parseInt(departureData.get("maxSlots").toString());
+
+                int booked = departureData.get("bookedSlots") != null
+                        ? Integer.parseInt(departureData.get("bookedSlots").toString())
+                        : 0;
+
                 availableSlots = max - booked;
                 bucket.set(availableSlots);
+            } else {
+                // Ép kiểu an toàn từ dữ liệu lấy trong Redis ra
+                availableSlots = Integer.parseInt(bucketValue.toString());
             }
 
             if (availableSlots < request.getPassengers().size()) {
