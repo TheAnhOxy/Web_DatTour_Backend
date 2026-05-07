@@ -1,22 +1,15 @@
-version: '3.8'
-
-
 services:
-  # 1. SEARCH ENGINE
+
+  # =====================
+  # ELASTIC STACK
+  # =====================
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
     container_name: webtour-elasticsearch
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
-      - xpack.security.http.ssl.enabled=false # Tắt SSL cho HTTP
-      - xpack.security.transport.ssl.enabled=false # Tắt SSL cho giao tiếp nội bộ
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    healthcheck:
-      test: [ "CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"\\|\"status\":\"yellow\"'" ]
-      interval: 10s
-      timeout: 5s
-      retries: 10
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
     ports:
       - "9200:9200"
     networks:
@@ -25,72 +18,86 @@ services:
   kibana:
     image: docker.elastic.co/kibana/kibana:8.11.1
     container_name: kibana
-    ports:
-      - "5601:5601"
     environment:
       - ELASTICSEARCH_HOSTS=http://webtour-elasticsearch:9200
-      - I18N_LOCALE=en
+    ports:
+      - "5601:5601"
     depends_on:
-      elasticsearch:
-        condition: service_healthy
+      - elasticsearch
     networks:
       - gotour-network
 
-  # 2. MESSAGE BROKER (Dùng image của wurstmeister cho nhẹ và ổn định)
+
+  # =====================
+  # KAFKA STACK
+  # =====================
   zookeeper:
-    image: wurstmeister/zookeeper:latest
+    image: confluentinc/cp-zookeeper:7.5.0
     container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
     ports:
       - "2181:2181"
     networks:
       - gotour-network
 
   kafka:
-    image: wurstmeister/kafka:latest
+    image: confluentinc/cp-kafka:7.5.0
     container_name: kafka
-    ports:
-      - "9092:9092"
-    environment:
-      KAFKA_ADVERTISED_HOST_NAME: localhost
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_CREATE_TOPICS: "tour-events:1:1" # Tạo sẵn topic cho bạn
     depends_on:
       - zookeeper
+    ports:
+      - "9092:9092"   # Cổng nội bộ (cho Docker sau này)
+      - "29092:29092" # Cổng bên ngoài (cho IntelliJ hiện tại)
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # Lắng nghe trên tất cả các interface của container
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
+      # Quảng bá địa chỉ để Client biết đường mà tìm
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      # Tự động tạo topic nếu chưa có (để đỡ lỗi Topic not present)
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     networks:
       - gotour-network
 
-  # 3. CACHING
+
+  # =====================
+  # CACHE
+  # =====================
   redis:
-    image: redis:alpine
+    image: redis:7-alpine
     container_name: redis
     ports:
       - "6379:6379"
     networks:
       - gotour-network
 
-  # 4. MONITORING
+
+  # =====================
+  # MONITORING
+  # =====================
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus
     container_name: prometheus
     ports:
       - "9090:9090"
-    # Tạm thời comment volumes nếu bạn chưa tạo file prometheus.yml để tránh lỗi khởi động
-    # volumes:
-    #   - ./prometheus.yml:/etc/prometheus/prometheus.yml
     networks:
       - gotour-network
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana
     container_name: grafana
     ports:
       - "3000:3000"
     networks:
       - gotour-network
 
-  # 5. TRACING
   zipkin:
-    image: openzipkin/zipkin:latest
+    image: openzipkin/zipkin
     container_name: zipkin
     ports:
       - "9411:9411"
@@ -98,8 +105,10 @@ services:
       - gotour-network
 
 
- # service
-  # --- 1. GATEWAY & CORE SERVICES ---
+  # =====================
+  # MICROSERVICES
+  # =====================
+
   api-gateway:
     build: ./api-gateway
     container_name: api-gateway
@@ -113,8 +122,13 @@ services:
       - PAYMENT_SERVICE_URL=http://payment-service:8085
       - SUPPORT_SERVICE_URL=http://support-service:8086
       - NOTIFICATION_SERVICE_URL=http://notification-service:8087
+    depends_on:
+      - identity-service
+      - core-service
+      - search-service
     networks:
       - gotour-network
+
 
   identity-service:
     build: ./identity-service
@@ -122,12 +136,14 @@ services:
     ports:
       - "8081:8081"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/identity_db
       - SPRING_REDIS_HOST=redis
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     depends_on:
       - redis
+      - kafka
     networks:
       - gotour-network
+
 
   core-service:
     build: ./core-service
@@ -135,14 +151,13 @@ services:
     ports:
       - "8082:8082"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/core_db
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     depends_on:
       - kafka
     networks:
       - gotour-network
 
-  # --- 2. SEARCH & BOOKING SERVICES ---
+
   search-service:
     build: ./search-service
     container_name: search-service
@@ -152,10 +167,11 @@ services:
       - SPRING_ELASTICSEARCH_URIS=http://webtour-elasticsearch:9200
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     depends_on:
-      elasticsearch:
-        condition: service_healthy
+      - elasticsearch
+      - kafka
     networks:
       - gotour-network
+
 
   booking-service:
     build: ./booking-service
@@ -163,7 +179,6 @@ services:
     ports:
       - "8084:8084"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/booking_db
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - REDIS_HOST=redis
     depends_on:
@@ -172,28 +187,25 @@ services:
     networks:
       - gotour-network
 
-  # --- 3. PAYMENT & SUPPORT SERVICES ---
+
   payment-service:
     build: ./payment-service
     container_name: payment-service
     ports:
       - "8085:8085"
-    environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/payment_db
     networks:
       - gotour-network
+
 
   support-service:
     build: ./support-service
     container_name: support-service
     ports:
       - "8086:8086"
-    environment:
-      - SPRING_DATA_MONGODB_URI=mongodb+srv://theanh123:theanh123@cluster.mongodb.net/tour_db
     networks:
       - gotour-network
 
-  # --- 4. NOTIFICATION SERVICE ---
+
   notification-service:
     build: ./notification-service
     container_name: notification-service
@@ -205,7 +217,6 @@ services:
       - kafka
     networks:
       - gotour-network
-
 
 
 networks:

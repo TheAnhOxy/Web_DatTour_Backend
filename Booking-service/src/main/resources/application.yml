@@ -7,9 +7,18 @@ spring:
     name: booking-service
 
   kafka:
-    bootstrap-servers: localhost:9092
+    # Mặc định là localhost cho tiền bối chạy IntelliJ,
+    # nhưng khi chạy Docker nó sẽ bị đè bởi biến KAFKA_BOOTSTRAP_SERVERS
+    bootstrap-servers: localhost:29092
     producer:
       retries: 0
+      properties:
+        max.block.ms: 1000
+        request.timeout.ms: 1000
+        delivery.timeout.ms: 2000
+        reconnect.backoff.ms: 500
+        reconnect.backoff.max.ms: 1000
+        metadata.max.age.ms: 1000
 
   datasource:
     url: jdbc:postgresql://ep-red-river-amkvj9tx-pooler.c-5.us-east-1.aws.neon.tech/booking_db?sslmode=require

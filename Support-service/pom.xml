@@ -15,14 +15,27 @@
     <groupId>com.tour</groupId>
     <artifactId>Support-service</artifactId>
     <version>0.0.1-SNAPSHOT</version>
+    <properties>
+        <java.version>17</java.version>
+        <spring-cloud.version>2023.0.1</spring-cloud.version>
+        <lombok.version>1.18.36</lombok.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
 
     <name>Support-service</name>
     <description>Support-service</description>
-
-    <properties>
-        <java.version>17</java.version>
-        <lombok.version>1.18.36</lombok.version>
-    </properties>
 
     <dependencies>
 
@@ -99,17 +112,7 @@
 
     </dependencies>
 
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-dependencies</artifactId>
-                <version>2023.0.3</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
+
 
     <build>
         <plugins>
