@@ -2,6 +2,7 @@ package com.tour.payment.controller;
 
 
 import com.tour.payment.dto.request.SePayWebhookRequest;
+import com.tour.payment.dto.request.StripeWebhookRequest;
 import com.tour.payment.dto.response.ApiResponse;
 import com.tour.payment.dto.response.PaymentResponse;
 import com.tour.payment.service.PaymentService;
@@ -49,6 +50,29 @@ public class PaymentController {
             }
 
             paymentService.processCallback("SEPAY", params);
+            return ResponseEntity.ok(ApiResponse.builder()
+                    .status(200)
+                    .message("Xử lý thanh toán thành công")
+                    .build());
+        } catch (Exception ex) {
+            return ResponseEntity.badRequest().body(ApiResponse.builder()
+                    .status(400)
+                    .message("Lỗi xử lý: " + ex.getMessage())
+                    .build());
+        }
+    }
+
+    @PostMapping("/stripe-webhook")
+    public ResponseEntity<ApiResponse> handleStripeWebhook(@RequestBody StripeWebhookRequest webhookData) {
+        try {
+            Map<String, String> params = new HashMap<>();
+            params.put("transactionId", webhookData.getTransactionId());
+            params.put("status", webhookData.getStatus());
+            if (webhookData.getIdempotencyKey() != null && !webhookData.getIdempotencyKey().isBlank()) {
+                params.put("idempotencyKey", webhookData.getIdempotencyKey());
+            }
+
+            paymentService.processCallback("STRIPE", params);
             return ResponseEntity.ok(ApiResponse.builder()
                     .status(200)
                     .message("Xử lý thanh toán thành công")

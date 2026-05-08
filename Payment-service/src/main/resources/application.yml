@@ -60,3 +60,6 @@ sepay:
   bank-code: ICB
   account-no: 109876820087
   template: compact
+
+stripe:
+  checkout-base-url: https://checkout.stripe.com/pay/
