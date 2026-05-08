@@ -26,7 +26,7 @@ public class Payment {
     @Column(length = 120, unique = true) // UNIQUE để tránh trùng lặp giao dịch
     private String transactionId;
 
-    private String gateway; // VNPAY, MOMO, STRIPE
+    private String gateway; // STRIPE, SEPAY, CASH_OFFICE
 
     @Column(columnDefinition = "TEXT")
     private String paymentUrl;
