@@ -23,14 +23,14 @@ public class PaymentController {
 
 
     @GetMapping("/callback")
-    public ApiResponse gatewayCallback(@RequestParam("transactionId") String transactionId,
-                                       @RequestParam("status") String status) {
+        public ApiResponse gatewayCallback(@RequestParam("gateway") String gateway,
+                           @RequestParam java.util.Map<String, String> params) {
 
-        paymentService.processCallback(transactionId, status);
+        paymentService.processCallback(gateway, params);
         return ApiResponse.builder()
                 .status(200)
                 .message("Đã xử lý callback từ cổng thanh toán")
-                .data(status)
+            .data("OK")
                 .build();
     }
 
