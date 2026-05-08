@@ -15,8 +15,6 @@ public class ResetPasswordRequest {
     @NotBlank(message = "EMAIL_REQUIRED")
     private String email;
 
-    @NotBlank(message = "OTP_REQUIRED")
-    private String otp;
 
     @NotBlank(message = "NEW_PASSWORD_REQUIRED")
     @Size(min = 8, message = "PASSWORD_TOO_SHORT")

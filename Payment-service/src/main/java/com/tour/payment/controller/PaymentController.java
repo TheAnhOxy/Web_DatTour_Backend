@@ -84,6 +84,14 @@ public class PaymentController {
                     .build());
         }
     }
+    @GetMapping("/admin/all")
+    public ResponseEntity<ApiResponse> getAllPayments() {
+        return ResponseEntity.ok(ApiResponse.builder()
+                .status(200)
+                .message("Lấy danh sách thanh toán thành công")
+                .data(paymentService.getAllPaymentDetails())
+                .build());
+    }
 
     // Lấy thông tin thanh toán theo mã đơn hàng
     @GetMapping("/booking/{bookingId}")
