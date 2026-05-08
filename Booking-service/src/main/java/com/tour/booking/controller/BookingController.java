@@ -11,6 +11,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/bookings")
 @RequiredArgsConstructor
@@ -46,6 +48,41 @@ public class BookingController {
                 .status(200)
                 .message("Lấy chi tiết đơn hàng thành công")
                 .data(response)
+                .build();
+    }
+
+    @GetMapping("/by-users")
+    public ApiResponse getBookingsByUserIds(@RequestParam List<Long> userIds) {
+        return ApiResponse.builder()
+                .status(200)
+                .data(bookingService.getBookingsByUserIds(userIds))
+                .build();
+    }
+
+    @GetMapping("/user/{userId}")
+    public ApiResponse getByUserId(@PathVariable Long userId) {
+        return ApiResponse.builder()
+                .status(200)
+                .message("Lấy danh sách đơn hàng thành công")
+                .data(bookingService.getBookingsByUserId(userId))
+                .build();
+    }
+
+    // Lấy tất cả booking hệ thống (Cho Admin)
+    @GetMapping("/all")
+    public ApiResponse getAll() {
+        return ApiResponse.builder()
+                .status(200)
+                .message("Lấy toàn bộ danh sách đơn hàng thành công")
+                .data(bookingService.getAllBookings())
+                .build();
+    }
+
+    @GetMapping("/by-ids")
+    public ApiResponse getBookingsByIds(@RequestParam List<Long> ids) {
+        return ApiResponse.builder()
+                .status(200)
+                .data(bookingService.getBookingsByIds(ids))
                 .build();
     }
 
