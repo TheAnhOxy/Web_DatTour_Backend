@@ -1,9 +1,13 @@
 package com.tour.identity.service.impl;
 
+import com.tour.identity.client.BookingClient;
+import com.tour.identity.client.PaymentClient;
 import com.tour.identity.dto.event.NotificationEvent;
 import com.tour.identity.dto.request.*;
+import com.tour.identity.dto.response.ApiResponse;
 import com.tour.identity.dto.response.LoginResponse;
 import com.tour.identity.dto.response.UserResponse;
+import com.tour.identity.dto.response.UserWithBookingResponse;
 import com.tour.identity.entity.User;
 import com.tour.identity.repository.UserRepository;
 import com.tour.identity.service.AuthService;
@@ -17,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -25,14 +30,16 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class AuthServiceImpl implements AuthService {
+public
+class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
     private final StringRedisTemplate redisTemplate;
     private final KafkaTemplate<String, Object> kafkaTemplate;
-
+    private final BookingClient bookingClient;
+    private final PaymentClient paymentClient;
     @Override
     public LoginResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
@@ -118,25 +125,40 @@ public class AuthServiceImpl implements AuthService {
         log.info("Forgot password OTP sent to Kafka for: {}", email);
     }
 
+    private static final String VERIFIED_PREFIX = "VERIFIED:";
+
     @Override
-    @Transactional
-    public void resetPassword(ResetPasswordRequest request) {
-        // Lấy OTP từ Redis
+    public void verifyOtp(VerifyOtpRequest request) {
         String storedOtp = redisTemplate.opsForValue().get(OTP_PREFIX + request.getEmail());
 
         if (storedOtp == null) throw new RuntimeException("OTP_EXPIRED");
         if (!storedOtp.equals(request.getOtp())) throw new RuntimeException("INVALID_OTP");
+        redisTemplate.delete(OTP_PREFIX + request.getEmail());
+
+        // Tạo một "vé thông hành" trong Redis để cho phép reset password
+        // Key: VERIFIED:theanh@gmail.com, Value: true, TTL: 10 phút
+        redisTemplate.opsForValue().set(VERIFIED_PREFIX + request.getEmail(), "true", 10, TimeUnit.MINUTES);
+
+        log.info("OTP verified for: {}", request.getEmail());
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        String isVerified = redisTemplate.opsForValue().get(VERIFIED_PREFIX + request.getEmail());
+
+        if (isVerified == null || !isVerified.equals("true")) {
+            throw new RuntimeException("PLEASE_VERIFY_OTP_FIRST");
+        }
+
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("USER_NOT_FOUND"));
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
-
-        // Xóa OTP sau khi dùng xong
-        redisTemplate.delete(OTP_PREFIX + request.getEmail());
+        redisTemplate.delete(VERIFIED_PREFIX + request.getEmail());
         log.info("Password reset successfully for: {}", request.getEmail());
     }
-
     @Override
     public void logout(String token) {
         try {
@@ -229,5 +251,157 @@ public class AuthServiceImpl implements AuthService {
         userRepository.save(user);
 
         log.info("User with ID {} has been soft-deleted", userId);
+    }
+
+    @Override
+    public UserResponse getUserById(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("USER_NOT_FOUND"));
+
+        // Chặn luôn nếu user đã bị xóa (soft-delete) nếu tiền bối muốn
+        if ("DELETED".equals(user.getStatus())) {
+            throw new RuntimeException("USER_HAS_BEEN_DELETED");
+        }
+
+        return UserResponse.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .phone(user.getPhone())
+                .address(user.getAddress())
+                .dob(user.getDob())
+                .gender(user.getGender())
+                .status(user.getStatus())
+                .avatarUrl(user.getAvatarUrl())
+                .currentPoints(user.getCurrentPoints())
+                .roles(user.getRoles().stream()
+                        .map(role -> role.getName())
+                        .collect(Collectors.toSet()))
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public UserResponse adminUpdateUser(Long id, UpdateProfileRequest request) {
+        // 1. Tìm user
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("USER_NOT_FOUND"));
+
+        if ("DELETED".equals(user.getStatus())) {
+            throw new RuntimeException("CANNOT_UPDATE_DELETED_USER");
+        }
+
+        // 2. Cập nhật thông tin (Chỉ cập nhật những gì request có gửi)
+        if (request.getFullName() != null) user.setFullName(request.getFullName());
+        if (request.getPhone() != null) user.setPhone(request.getPhone());
+        if (request.getAddress() != null) user.setAddress(request.getAddress());
+        if (request.getDob() != null) user.setDob(request.getDob());
+        if (request.getGender() != null) user.setGender(request.getGender());
+        if (request.getAvatarUrl() != null) user.setAvatarUrl(request.getAvatarUrl());
+
+        // Admin có thể cập nhật thêm trạng thái nếu tiền bối muốn bổ sung vào DTO
+        // if (request.getStatus() != null) user.setStatus(request.getStatus());
+
+        // 3. Lưu vào DB
+        User updatedUser = userRepository.save(user);
+
+        // 4. Trả về UserResponse (Tương tự getUserById)
+        return UserResponse.builder()
+                .id(updatedUser.getId())
+                .email(updatedUser.getEmail())
+                .fullName(updatedUser.getFullName())
+                .phone(updatedUser.getPhone())
+                .address(updatedUser.getAddress())
+                .dob(updatedUser.getDob())
+                .gender(updatedUser.getGender())
+                .status(updatedUser.getStatus())
+                .avatarUrl(updatedUser.getAvatarUrl())
+                .currentPoints(updatedUser.getCurrentPoints())
+                .roles(updatedUser.getRoles().stream()
+                        .map(role -> role.getName())
+                        .collect(Collectors.toSet()))
+                .build();
+    }
+
+    @Override
+    public List<UserWithBookingResponse> getAllUsersWithBookings() {
+        List<UserResponse> users = getAllUsers();
+        List<Long> userIds = users.stream().map(UserResponse::getId).toList();
+
+        ApiResponse bookingRes = bookingClient.getBookingsByUserIds(userIds);
+
+        // Debug: log ra để xem data thực tế từ Booking Service gửi sang là gì
+        log.info("=> Data từ Booking Service: {}", bookingRes.getData());
+
+        // Jackson luôn coi Key là String khi deserialize vào Map
+        Map<String, Object> bookingMap = (Map<String, Object>) bookingRes.getData();
+
+        return users.stream().map(user -> {
+            String userIdStr = String.valueOf(user.getId());
+
+            // Lấy list booking, nếu null thì trả về mảng rỗng
+            Object bookingsObj = (bookingMap != null) ? bookingMap.get(userIdStr) : null;
+            List<Object> userBookings = (bookingsObj instanceof List) ? (List<Object>) bookingsObj : List.of();
+
+            return UserWithBookingResponse.builder()
+                    .user(user)
+                    .bookings(userBookings)
+                    .build();
+        }).toList();
+    }
+    @Override
+    public List<Map<String, Object>> getFullPaymentReport() {
+        // 1. Lấy danh sách Payment từ Payment Service
+        ApiResponse paymentRes = paymentClient.getAllPayments();
+        List<Map<String, Object>> payments = (List<Map<String, Object>>) paymentRes.getData();
+        if (payments == null || payments.isEmpty()) return List.of();
+
+        // 2. Lấy Map Bookings từ Booking Service (Tiền bối đã làm rất tốt bước này)
+        List<Long> bookingIds = payments.stream()
+                .map(p -> Long.valueOf(p.get("bookingId").toString()))
+                .distinct().toList();
+        ApiResponse bookingRes = bookingClient.getBookingsByIds(bookingIds);
+        Map<String, Object> bookingMap = (Map<String, Object>) bookingRes.getData();
+
+        // 3. Gộp dữ liệu
+        return payments.stream().map(payment -> {
+            String bIdStr = payment.get("bookingId").toString();
+            Object bInfo = bookingMap != null ? bookingMap.get(bIdStr) : null;
+            payment.put("bookingDetails", bInfo);
+
+            // --- ĐẮP THỊT CUSTOMER AN TOÀN ---
+            if (bInfo instanceof Map) {
+                Map<String, Object> bInfoMap = (Map<String, Object>) bInfo;
+                Object userIdObj = bInfoMap.get("userId");
+
+                if (userIdObj != null) {
+                    Long userId = Long.valueOf(userIdObj.toString());
+
+                    // SỬA TẠI ĐÂY: Dùng findById để tránh văng Exception USER_NOT_FOUND
+                    userRepository.findById(userId).ifPresentOrElse(
+                            user -> payment.put("customerDetails", mapToUserResponse(user)), // Hàm map user của tiền bối
+                            () -> payment.put("customerDetails", "Khách hàng không tồn tại (ID: " + userId + ")")
+                    );
+                }
+            }
+            return payment;
+        }).toList();
+    }
+
+    private UserResponse mapToUserResponse(User user) {
+        return UserResponse.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .phone(user.getPhone())
+                .address(user.getAddress())
+                .dob(user.getDob())
+                .gender(user.getGender())
+                .status(user.getStatus())
+                .currentPoints(user.getCurrentPoints())
+                .roles(user.getRoles().stream()
+                        .map(role -> role.getName())
+                        .collect(Collectors.toSet()))
+                .build();
     }
 }

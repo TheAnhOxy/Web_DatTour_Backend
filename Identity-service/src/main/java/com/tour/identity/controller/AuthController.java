@@ -38,6 +38,16 @@ public class AuthController {
                 .build());
     }
 
+    @PostMapping("/verify-otp")
+    public ResponseEntity<ApiResponse> verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
+        authService.verifyOtp(request);
+        return ResponseEntity.ok(ApiResponse.builder()
+                .status(200)
+                .message("OTP verified successfully. You can now reset your password.")
+                .build());
+    }
+
+    // API này bây giờ không nhận OTP nữa
     @PostMapping("/reset-password")
     public ResponseEntity<ApiResponse> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request);
@@ -107,12 +117,51 @@ public class AuthController {
                 .build());
     }
 
-    @GetMapping("/admin/user")
+    @PutMapping("/admin/users/{id}")
+    public ResponseEntity<ApiResponse> adminUpdateUser(
+            @PathVariable Long id,
+            @RequestBody UpdateProfileRequest request) {
+        return ResponseEntity.ok(ApiResponse.builder()
+                .status(200)
+                .message("User updated successfully by Admin")
+                .data(authService.adminUpdateUser(id, request))
+                .build());
+    }
+
+    @GetMapping("/admin/users")
     public ResponseEntity<ApiResponse> getAllUsers(){
         return ResponseEntity.ok(ApiResponse.builder()
                 .status(200)
                 .data(authService.getAllUsers())
                 .build());
     }
+
+
+    @GetMapping("/admin/users/{id}")
+    public ResponseEntity<ApiResponse> getUserById(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.builder()
+                .status(200)
+                .message("Get user successfully")
+                .data(authService.getUserById(id))
+                .build());
+    }
+    @GetMapping("/admin/users-with-bookings")
+    public ResponseEntity<ApiResponse> getAllUsersWithBookings() {
+        return ResponseEntity.ok(ApiResponse.builder()
+                .status(200)
+                .message("Lấy danh sách User và lịch sử đặt tour thành công")
+                .data(authService.getAllUsersWithBookings())
+                .build());
+    }
+
+    @GetMapping("/admin/payment-report")
+    public ResponseEntity<ApiResponse> getFullReport() {
+        return ResponseEntity.ok(ApiResponse.builder()
+                .status(200)
+                .message("Báo cáo tổng hợp thành công")
+                .data(authService.getFullPaymentReport())
+                .build());
+    }
+
 
 }

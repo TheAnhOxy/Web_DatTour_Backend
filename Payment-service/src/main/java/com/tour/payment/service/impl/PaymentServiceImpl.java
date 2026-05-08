@@ -1,5 +1,6 @@
 package com.tour.payment.service.impl;
 
+import com.tour.payment.dto.response.PaymentDetailResponse;
 import com.tour.payment.dto.response.PaymentResponse;
 import com.tour.payment.entity.Payment;
 import com.tour.payment.repository.PaymentRepository;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -51,6 +53,21 @@ public class PaymentServiceImpl implements PaymentService {
             kafkaTemplate.send("payment-completed-topic", txnRef);
             log.info("=> [Kafka] Đã báo SUCCESS cho đơn: {}", txnRef);
         }
+    }
+    @Override
+    public List<PaymentDetailResponse> getAllPaymentDetails() {
+        List<Payment> payments = paymentRepository.findAll();
+
+        return payments.stream().map(p -> PaymentDetailResponse.builder()
+                .transactionId(p.getTransactionId())
+                .amount(p.getAmount())
+                .paymentStatus(p.getStatus())
+                .paidAt(p.getPaidAt())
+                .paymentUrl(p.getPaymentUrl())
+                .paymentMethodName(p.getPaymentMethod() != null ? p.getPaymentMethod().getName() : "N/A")
+                // QUAN TRỌNG: Phải map bookingId từ Entity sang DTO
+                .bookingId(p.getBookingId())
+                .build()).toList();
     }
 
 
