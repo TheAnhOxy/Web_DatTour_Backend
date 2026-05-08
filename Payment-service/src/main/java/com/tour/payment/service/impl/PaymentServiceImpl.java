@@ -4,14 +4,14 @@ import com.tour.payment.dto.response.PaymentResponse;
 import com.tour.payment.entity.Payment;
 import com.tour.payment.repository.PaymentRepository;
 import com.tour.payment.service.PaymentService;
+import com.tour.payment.service.gateway.PaymentGatewayStrategy;
+import com.tour.payment.service.gateway.PaymentGatewayStrategyFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +22,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final ModelMapper modelMapper;
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final PaymentGatewayStrategyFactory gatewayStrategyFactory;
 
     public PaymentResponse getPaymentByBookingId(Long bookingId) {
         Payment payment = paymentRepository.findByBookingId(bookingId)
@@ -43,8 +44,8 @@ public class PaymentServiceImpl implements PaymentService {
         Payment payment = paymentRepository.findByTransactionId(txnRef)
                 .orElseThrow(() -> new RuntimeException("Giao dịch không tồn tại"));
 
-        payment.setStatus(status);
-        payment.setPaidAt(LocalDateTime.now());
+        PaymentGatewayStrategy strategy = gatewayStrategyFactory.getStrategy(payment.getGateway());
+        strategy.applyCallback(payment, status);
         paymentRepository.save(payment);
 
         if ("SUCCESS".equals(status)) {

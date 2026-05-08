@@ -22,12 +22,11 @@ public class PaymentController {
     private final PaymentService paymentService;
 
 
-    @GetMapping("/vnpay-callback")
-    public ApiResponse vnpayCallback(@RequestParam("vnp_TxnRef") String txnRef,
-                                     @RequestParam("vnp_ResponseCode") String responseCode) {
+    @GetMapping("/callback")
+    public ApiResponse gatewayCallback(@RequestParam("transactionId") String transactionId,
+                                       @RequestParam("status") String status) {
 
-        String status = "00".equals(responseCode) ? "SUCCESS" : "FAILED";
-        paymentService.processCallback(txnRef, status);
+        paymentService.processCallback(transactionId, status);
         return ApiResponse.builder()
                 .status(200)
                 .message("Đã xử lý callback từ cổng thanh toán")
@@ -47,13 +46,6 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.getPaymentByTransactionId(transactionId));
     }
 
-//    @PostMapping
-//    public ResponseEntity<ApiResponse> create(@RequestBody FoodRequest request) {
-//        return ResponseEntity.status(201).body(ApiResponse.builder()
-//                .status(201)
-//                .message("Thêm món thành công")
-//                .data(foodService.createFood(request))
-//                .build());
-//    }
+
 
 }
