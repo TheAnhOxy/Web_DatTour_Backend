@@ -3,6 +3,7 @@ package com.tour.payment.service.gateway;
 import com.tour.payment.entity.Payment;
 import com.tour.payment.entity.PaymentMethod;
 import com.tour.payment.service.callback.PaymentCallbackData;
+import com.tour.payment.service.sepay.SePayService;
 import org.springframework.stereotype.Component;
 
 import com.tour.payment.service.state.PaymentStatus;
@@ -11,7 +12,10 @@ import java.math.BigDecimal;
 import java.util.Map;
 
 @Component
+@lombok.RequiredArgsConstructor
 public class SePayPaymentGatewayStrategy implements PaymentGatewayStrategy {
+
+    private final SePayService sePayService;
 
     @Override
     public String getGateway() {
@@ -21,7 +25,8 @@ public class SePayPaymentGatewayStrategy implements PaymentGatewayStrategy {
     @Override
     public Payment createPayment(Map<String, Object> message, PaymentMethod method) {
         String bookingCode = message.get("bookingCode").toString();
-        String paymentUrl = "https://sepay.vn/pay?order=" + bookingCode;
+        double amount = Double.parseDouble(message.get("totalAmount").toString());
+        String paymentUrl = sePayService.generateQrUrl(amount, bookingCode);
 
         return Payment.builder()
                 .bookingId(Long.valueOf(message.get("bookingId").toString()))
@@ -38,6 +43,7 @@ public class SePayPaymentGatewayStrategy implements PaymentGatewayStrategy {
     public PaymentCallbackData parseCallback(Map<String, String> params) {
         String transactionId = params.get("transactionId");
         String status = params.get("status");
+        String idempotencyKey = params.get("idempotencyKey");
         if (transactionId == null || status == null) {
             throw new RuntimeException("Missing callback params for SePay");
         }
@@ -45,7 +51,7 @@ public class SePayPaymentGatewayStrategy implements PaymentGatewayStrategy {
         return PaymentCallbackData.builder()
                 .transactionId(transactionId)
                 .status(status)
-                .idempotencyKey(buildIdempotencyKey(transactionId, status))
+                .idempotencyKey(idempotencyKey == null ? buildIdempotencyKey(transactionId, status) : idempotencyKey)
                 .build();
     }
 

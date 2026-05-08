@@ -55,3 +55,8 @@ springdoc:
     path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
+
+sepay:
+  bank-code: ICB
+  account-no: 109876820087
+  template: compact

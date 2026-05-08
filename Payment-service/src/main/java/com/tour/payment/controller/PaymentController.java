@@ -1,12 +1,16 @@
 package com.tour.payment.controller;
 
 
+import com.tour.payment.dto.request.SePayWebhookRequest;
 import com.tour.payment.dto.response.ApiResponse;
 import com.tour.payment.dto.response.PaymentResponse;
 import com.tour.payment.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/payments")
@@ -32,6 +36,29 @@ public class PaymentController {
                 .message("Đã xử lý callback từ cổng thanh toán")
             .data("OK")
                 .build();
+    }
+
+    @PostMapping("/sepay-webhook")
+    public ResponseEntity<ApiResponse> handleSePayWebhook(@RequestBody SePayWebhookRequest webhookData) {
+        try {
+            Map<String, String> params = new HashMap<>();
+            params.put("transactionId", webhookData.getTransactionId());
+            params.put("status", webhookData.getStatus());
+            if (webhookData.getIdempotencyKey() != null && !webhookData.getIdempotencyKey().isBlank()) {
+                params.put("idempotencyKey", webhookData.getIdempotencyKey());
+            }
+
+            paymentService.processCallback("SEPAY", params);
+            return ResponseEntity.ok(ApiResponse.builder()
+                    .status(200)
+                    .message("Xử lý thanh toán thành công")
+                    .build());
+        } catch (Exception ex) {
+            return ResponseEntity.badRequest().body(ApiResponse.builder()
+                    .status(400)
+                    .message("Lỗi xử lý: " + ex.getMessage())
+                    .build());
+        }
     }
 
     // Lấy thông tin thanh toán theo mã đơn hàng
