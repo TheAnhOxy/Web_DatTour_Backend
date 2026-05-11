@@ -40,4 +40,5 @@ public class Departure {
     private LocalDateTime pickupTime;
 
     private String status;
+
 }

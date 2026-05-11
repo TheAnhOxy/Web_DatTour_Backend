@@ -9,7 +9,7 @@ spring:
   application:
     name: api-gateway
   profiles:
-    active: @spring.profiles.active@
+    active: dev
 
 eureka:
   client:

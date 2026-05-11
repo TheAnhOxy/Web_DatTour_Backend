@@ -27,6 +27,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -246,5 +247,73 @@ public class BookingServiceImpl implements BookingService {
                 .priceDetail(priceConfig)
                 .message("Lấy thông tin đơn hàng thành công")
                 .build();
+    }
+
+    @Override
+    public List<BookingResponse> getBookingsByUserId(Long userId) {
+        List<Booking> bookings = bookingRepository.findByUserIdWithPassengers(userId);
+        return bookings.stream()
+                .map(this::mapToBookingResponse)
+                .toList();
+    }
+
+    @Override
+    public List<BookingResponse> getAllBookings() {
+        List<Booking> bookings = bookingRepository.findAllWithPassengers();
+        return bookings.stream()
+                .map(this::mapToBookingResponse)
+                .toList();
+    }
+
+    // Hàm Helper để map dữ liệu sang DTO cho gọn code
+    private BookingResponse mapToBookingResponse(Booking booking) {
+        Map<String, Object> priceSnapshot = booking.getPriceSnapshot();
+        Map<String, Object> priceConfig = (Map<String, Object>) priceSnapshot.get("priceConfig");
+        List<PassengerDTO> passengerDTOs = booking.getPassengers().stream()
+                .map(p -> PassengerDTO.builder()
+                        .fullName(p.getFullName())
+                        .ageGroup(p.getAgeGroup())
+                        .dob(p.getDob())
+                        .gender(p.getGender())
+                        .idCardNumber(p.getIdCardNumber())
+                        .build())
+                .toList();
+        return BookingResponse.builder()
+                .bookingCode(booking.getBookingCode())
+                .status(booking.getStatus())
+
+                .totalAmount(booking.getTotalAmount())
+                .createdAt(booking.getCreatedAt())
+                .passengers(passengerDTOs) // Đã có tên hành khách
+                .tourTitle(priceSnapshot != null ? (String) priceSnapshot.get("tourTitle") : "N/A")
+                .startDate(priceSnapshot != null ? String.valueOf(priceSnapshot.get("startDate")) : "")
+                .priceDetail(priceSnapshot != null ? (Map<String, Object>) priceSnapshot.get("priceConfig") : null)
+                .userId(booking.getUserId())
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Long, List<BookingResponse>> getBookingsByUserIds(List<Long> userIds) {
+        List<Booking> bookings = bookingRepository.findAllByUserIdsWithPassengers(userIds);
+
+        return bookings.stream()
+                .map(this::mapToBookingResponse)
+                .collect(Collectors.groupingBy(
+                        res -> bookings.stream()
+                                .filter(b -> b.getBookingCode().equals(res.getBookingCode()))
+                                .findFirst().get().getUserId()
+                ));
+    }
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Long, BookingResponse> getBookingsByIds(List<Long> ids) {
+        List<Booking> bookings = bookingRepository.findAllByIdsWithPassengers(ids);
+        return bookings.stream().collect(Collectors.toMap(
+                Booking::getId,
+                this::mapToBookingResponse
+        ));
     }
 }

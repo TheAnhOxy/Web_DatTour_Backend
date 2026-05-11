@@ -1,12 +1,17 @@
 package com.tour.payment.controller;
 
 
+import com.tour.payment.dto.request.SePayWebhookRequest;
+import com.tour.payment.dto.request.StripeWebhookRequest;
 import com.tour.payment.dto.response.ApiResponse;
 import com.tour.payment.dto.response.PaymentResponse;
 import com.tour.payment.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/payments")
@@ -22,17 +27,70 @@ public class PaymentController {
     private final PaymentService paymentService;
 
 
-    @GetMapping("/vnpay-callback")
-    public ApiResponse vnpayCallback(@RequestParam("vnp_TxnRef") String txnRef,
-                                     @RequestParam("vnp_ResponseCode") String responseCode) {
+    @GetMapping("/callback")
+        public ApiResponse gatewayCallback(@RequestParam("gateway") String gateway,
+                           @RequestParam java.util.Map<String, String> params) {
 
-        String status = "00".equals(responseCode) ? "SUCCESS" : "FAILED";
-        paymentService.processCallback(txnRef, status);
+        paymentService.processCallback(gateway, params);
         return ApiResponse.builder()
                 .status(200)
                 .message("Đã xử lý callback từ cổng thanh toán")
-                .data(status)
+            .data("OK")
                 .build();
+    }
+
+    @PostMapping("/sepay-webhook")
+    public ResponseEntity<ApiResponse> handleSePayWebhook(@RequestBody SePayWebhookRequest webhookData) {
+        try {
+            Map<String, String> params = new HashMap<>();
+            params.put("transactionId", webhookData.getTransactionId());
+            params.put("status", webhookData.getStatus());
+            if (webhookData.getIdempotencyKey() != null && !webhookData.getIdempotencyKey().isBlank()) {
+                params.put("idempotencyKey", webhookData.getIdempotencyKey());
+            }
+
+            paymentService.processCallback("SEPAY", params);
+            return ResponseEntity.ok(ApiResponse.builder()
+                    .status(200)
+                    .message("Xử lý thanh toán thành công")
+                    .build());
+        } catch (Exception ex) {
+            return ResponseEntity.badRequest().body(ApiResponse.builder()
+                    .status(400)
+                    .message("Lỗi xử lý: " + ex.getMessage())
+                    .build());
+        }
+    }
+
+    @PostMapping("/stripe-webhook")
+    public ResponseEntity<ApiResponse> handleStripeWebhook(@RequestBody StripeWebhookRequest webhookData) {
+        try {
+            Map<String, String> params = new HashMap<>();
+            params.put("transactionId", webhookData.getTransactionId());
+            params.put("status", webhookData.getStatus());
+            if (webhookData.getIdempotencyKey() != null && !webhookData.getIdempotencyKey().isBlank()) {
+                params.put("idempotencyKey", webhookData.getIdempotencyKey());
+            }
+
+            paymentService.processCallback("STRIPE", params);
+            return ResponseEntity.ok(ApiResponse.builder()
+                    .status(200)
+                    .message("Xử lý thanh toán thành công")
+                    .build());
+        } catch (Exception ex) {
+            return ResponseEntity.badRequest().body(ApiResponse.builder()
+                    .status(400)
+                    .message("Lỗi xử lý: " + ex.getMessage())
+                    .build());
+        }
+    }
+    @GetMapping("/admin/all")
+    public ResponseEntity<ApiResponse> getAllPayments() {
+        return ResponseEntity.ok(ApiResponse.builder()
+                .status(200)
+                .message("Lấy danh sách thanh toán thành công")
+                .data(paymentService.getAllPaymentDetails())
+                .build());
     }
 
     // Lấy thông tin thanh toán theo mã đơn hàng
@@ -47,13 +105,6 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.getPaymentByTransactionId(transactionId));
     }
 
-//    @PostMapping
-//    public ResponseEntity<ApiResponse> create(@RequestBody FoodRequest request) {
-//        return ResponseEntity.status(201).body(ApiResponse.builder()
-//                .status(201)
-//                .message("Thêm món thành công")
-//                .data(foodService.createFood(request))
-//                .build());
-//    }
+
 
 }
