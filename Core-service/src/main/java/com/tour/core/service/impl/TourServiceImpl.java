@@ -147,14 +147,11 @@ public class TourServiceImpl implements TourService {
         Transportation transportation = transportationRepository.findById(request.getTransportationId())
                 .orElseThrow(() -> new ResourceNotFoundException("Phương tiện không tồn tại: " + request.getTransportationId()));
 
-        Set<Destination> destinations = resolveDestinations(request.getDestinationIds());
-
         modelMapper.map(request, tour);
         tour.setImages(null);
         tour.setSlug(nextSlug);
         tour.setCategory(category);
         tour.setTransportation(transportation);
-        tour.setDestinations(destinations);
         tour.setStatus(request.getStatus() == null || request.getStatus().isBlank() ? "ACTIVE" : request.getStatus());
         tour.setIsHot(Boolean.TRUE.equals(request.getIsHot()));
 

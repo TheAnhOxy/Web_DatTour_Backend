@@ -42,16 +42,18 @@ public class SecurityConfig {
                                 "/actuator/**"
                         ).permitAll()
 
-                        // PUBLIC APIs
-                        .requestMatchers(HttpMethod.GET,
-                                "/core/tours",
-                                "/core/tours/**",
-                                "/core/departures/**"
-                        ).permitAll()
-
                         // ADMIN
                         .requestMatchers(HttpMethod.GET, "/core/tours/admin")
                         .hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
+
+                        // PUBLIC APIs
+                        .requestMatchers(HttpMethod.GET,
+                   "/core/tours",
+                                "/core/tours/*",
+                                "/core/departures/**",
+                                "/core/categories/**",
+                                "/core/destinations/**"
+                        ).permitAll()
 
                         // WISHLIST
                         .requestMatchers(HttpMethod.POST, "/core/wishlists/**")
@@ -64,11 +66,9 @@ public class SecurityConfig {
                         .hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF", "ROLE_CUSTOMER")
 
                         // WRITE APIs
-                        .requestMatchers(HttpMethod.POST, "/core/**").permitAll()
-
-                        .requestMatchers(HttpMethod.PUT, "/core/**").permitAll()
-                        .requestMatchers(HttpMethod.DELETE, "/core/**")
-                        .hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
+                        .requestMatchers(HttpMethod.POST, "/core/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
+                        .requestMatchers(HttpMethod.PUT, "/core/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
+                        .requestMatchers(HttpMethod.DELETE, "/core/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
 
                         .anyRequest().authenticated()
                 )
