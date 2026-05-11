@@ -157,9 +157,6 @@ public class TourServiceImpl implements TourService {
 
         Tour savedTour = tourRepository.save(tour);
 
-        tourImageRepository.deleteByTourId(savedTour.getId());
-        saveTourImages(savedTour, request.getImages());
-
         // nếu gửi danh sách departures thì phải có ít nhất một mục, nếu không gửi thì giữ nguyên lịch khởi hành cũ
         if (request.getDepartures() != null) {
             if (request.getDepartures().isEmpty()) {
