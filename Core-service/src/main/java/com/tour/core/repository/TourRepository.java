@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface TourRepository extends JpaRepository<Tour, Long> {
@@ -27,4 +28,13 @@ public interface TourRepository extends JpaRepository<Tour, Long> {
             @Param("isHot") Boolean isHot,
             Pageable pageable
     );
+
+    @Query("SELECT COUNT(t) FROM Tour t WHERE t.status = :status")
+    Long countByStatus(@Param("status") String status);
+
+    @Query("SELECT COUNT(t) FROM Tour t WHERE t.isHot = true")
+    Long countHotTours();
+
+    @Query("SELECT c.name, COUNT(t) FROM Tour t JOIN t.category c GROUP BY c.name ORDER BY COUNT(t) DESC")
+    List<Object[]> countToursByCategory();
 }
