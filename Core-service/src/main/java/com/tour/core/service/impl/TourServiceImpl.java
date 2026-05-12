@@ -14,6 +14,8 @@ import com.tour.core.entity.TourCategory;
 import com.tour.core.entity.TourImage;
 import com.tour.core.entity.Departure;
 import com.tour.core.entity.Transportation;
+import com.tour.core.event.DepartureEvent;
+import com.tour.core.event.TourSearchEvent;
 import com.tour.core.exception.InvalidDataException;
 import com.tour.core.exception.ResourceNotFoundException;
 import com.tour.core.repository.DestinationRepository;
@@ -34,6 +36,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -57,6 +60,7 @@ public class TourServiceImpl implements TourService {
     private final DepartureRepository departureRepository;
     private final ModelMapper modelMapper;
     private final RedissonClient redissonClient;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @Override
     @Cacheable(value = "tours", key = "'customer:' + (#categoryId == null ? 'ALL' : #categoryId) + ':' + (#isHot == null ? 'ALL' : #isHot) + ':' + #page + ':' + #size")
@@ -117,6 +121,17 @@ public class TourServiceImpl implements TourService {
         tour.setIsHot(Boolean.TRUE.equals(request.getIsHot()));
 
         Tour savedTour = tourRepository.save(tour);
+
+        TourSearchEvent event = TourSearchEvent.builder()
+                .tourId(savedTour.getId())
+                .title(savedTour.getTitle())
+                .destinations(savedTour.getDestinations().stream().map(Destination::getCityName).toList())
+                .departures(savedTour.getDepartures().stream()
+                        .map(d -> DepartureEvent.builder().id(d.getId()).startDate(d.getStartDate()).endDate(d.getEndDate()).build())
+                        .toList())
+                .build();
+        kafkaTemplate.send("tour-search-topic", event);
+
         saveTourImages(savedTour, request.getImages());
         
         // kiểm tra nếu có departures, nếu không có thì throw lỗi vì tour phải có ít nhất 1 lịch khởi hành để khách đặt
@@ -159,6 +174,22 @@ public class TourServiceImpl implements TourService {
         tour.setIsHot(Boolean.TRUE.equals(request.getIsHot()));
 
         Tour savedTour = tourRepository.save(tour);
+        // BẮN KAFKA ĐỂ SEARCH SERVICE CẬP NHẬT:
+        TourSearchEvent event = TourSearchEvent.builder()
+                .tourId(savedTour.getId())
+                .title(savedTour.getTitle())
+                .destinations(savedTour.getDestinations().stream()
+                        .map(Destination::getCityName) // Lấy tên thành phố từ ID
+                        .toList())
+                .departures(savedTour.getDepartures().stream()
+                        .map(d -> DepartureEvent.builder()
+                                .id(d.getId())
+                                .startDate(d.getStartDate())
+                                .endDate(d.getEndDate())
+                                .build())
+                        .toList())
+                .build();
+        kafkaTemplate.send("tour-search-topic", event);
 
         tourImageRepository.deleteByTourId(savedTour.getId());
         saveTourImages(savedTour, request.getImages());

@@ -7,16 +7,34 @@ spring:
   profiles:
     active: dev
 
-  elasticsearch:
-    uris: http://localhost:9200 # Hoặc URL host Cloud của bạn
+  kafka:
+    consumer:
+      group-id: search-group-v3 # ĐỔI TÊN GROUP để Kafka bỏ qua các tin nhắn lỗi cũ
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      # DÙNG ErrorHandlingDeserializer ở đây
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        # Chỉ định delegate là JsonDeserializer
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.trusted.packages: "*"
+        # ÉP KIỂU mặc định về class của Search Service
+        spring.json.value.default.type: com.tour.search.event.TourSearchEvent
+        # QUAN TRỌNG NHẤT: Lờ đi thông tin class trong Header (com.tour.core...)
+        spring.json.use.type.headers: false
+
+  data: # Thêm nhánh này
+    elasticsearch:
+      repositories:
+        enabled: true
+  elasticsearch: # Nhánh này giữ nguyên cho uris
+    uris: http://localhost:9200
 #    username: elastic
 #    password: your_password
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
 
-#  datasource:
-#    url: jdbc:postgresql://localhost:5434/food_db?options=-c%20timezone=UTC
-#    username: root
-#    password: Theanh123
-#    driver-class-name: org.postgresql.Driver
 #  jpa:
 #    hibernate:
 #      ddl-auto: update
