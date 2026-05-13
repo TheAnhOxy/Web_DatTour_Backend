@@ -72,10 +72,6 @@ public class Tour {
         @Column(columnDefinition = "jsonb")
         private String policies;
 
-        private BigDecimal rating;
-
-        private Integer reviewCount;
-
         @CreationTimestamp
         private LocalDateTime createdAt;
 
@@ -98,10 +94,12 @@ public class Tour {
     // @Column(columnDefinition = "jsonb")
     // private String policies;
 
-    // @Builder.Default
-    // private BigDecimal rating = BigDecimal.ZERO;
+    @Builder.Default
+    @Column(name = "rating")
+    private BigDecimal rating = BigDecimal.ZERO;
 
-    // @Builder.Default
-    // private Integer reviewCount = 0;
+    @Builder.Default
+    @Column(name = "review_count")
+    private Integer reviewCount = 0;
 
 }

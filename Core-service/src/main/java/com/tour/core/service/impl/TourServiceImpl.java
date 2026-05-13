@@ -42,6 +42,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -119,6 +120,8 @@ public class TourServiceImpl implements TourService {
         tour.setDestinations(destinations);
         tour.setStatus(request.getStatus() == null || request.getStatus().isBlank() ? "ACTIVE" : request.getStatus());
         tour.setIsHot(Boolean.TRUE.equals(request.getIsHot()));
+        tour.setRating(BigDecimal.ZERO);
+        tour.setReviewCount(0);
 
         Tour savedTour = tourRepository.save(tour);
 
@@ -303,24 +306,24 @@ public class TourServiceImpl implements TourService {
                     .orElse(null);
         }
 
-        return TourListResponse.builder()
-                .id(tour.getId())
-                .title(tour.getTitle())
-                .slug(tour.getSlug())
-                .basePrice(tour.getBasePrice())
-                .status(tour.getStatus())
-                .isHot(tour.getIsHot())
-                .coverImageUrl(coverImageUrl)
-                .categoryName(tour.getCategory() != null ? tour.getCategory().getName() : null)
-                .durationDays(tour.getDurationDays())
-                .region(tour.getDestinations() != null && !tour.getDestinations().isEmpty() 
-                        ? tour.getDestinations().iterator().next().getRegion() : null)
-                .departureId(nextDeparture != null ? nextDeparture.getId() : null)
-                .departureStartDate(nextDeparture != null ? nextDeparture.getStartDate() : null)
-                .pickupName(nextDeparture != null ? nextDeparture.getPickupName() : null)
-                .pickupAddress(nextDeparture != null ? nextDeparture.getPickupAddress() : null)
-                .pickupTime(nextDeparture != null ? nextDeparture.getPickupTime() : null)
-                .build();
+        log.debug("Tour ID={}, rating={}, reviewCount={}", tour.getId(), tour.getRating(), tour.getReviewCount());
+
+        TourListResponse response = modelMapper.map(tour, TourListResponse.class);
+        response.setCoverImageUrl(coverImageUrl);
+        response.setCategoryName(tour.getCategory() != null ? tour.getCategory().getName() : null);
+        response.setRegion(tour.getDestinations() != null && !tour.getDestinations().isEmpty() 
+                ? tour.getDestinations().iterator().next().getRegion() : null);
+        response.setDepartureId(nextDeparture != null ? nextDeparture.getId() : null);
+        response.setDepartureStartDate(nextDeparture != null ? nextDeparture.getStartDate() : null);
+        response.setPickupName(nextDeparture != null ? nextDeparture.getPickupName() : null);
+        response.setPickupAddress(nextDeparture != null ? nextDeparture.getPickupAddress() : null);
+        response.setPickupTime(nextDeparture != null ? nextDeparture.getPickupTime() : null);
+        response.setRating(tour.getRating());
+        response.setReviewCount(tour.getReviewCount());
+        
+        log.debug("Response after setting: rating={}, reviewCount={}", response.getRating(), response.getReviewCount());
+
+        return response;
     }
 
     private Departure findNextDeparture(Tour tour) {
@@ -345,33 +348,21 @@ public class TourServiceImpl implements TourService {
                         .map(destination -> modelMapper.map(destination, DestinationResponse.class))
                         .toList();
 
-        return TourDetailResponse.builder()
-                .id(tour.getId())
-                .title(tour.getTitle())
-                .slug(tour.getSlug())
-                .description(tour.getDescription())
-                .durationDays(tour.getDurationDays())
-                .status(tour.getStatus())
-                .isHot(tour.getIsHot())
-                .basePrice(tour.getBasePrice())
-                .categoryId(tour.getCategory() != null ? tour.getCategory().getId() : null)
-                .categoryName(tour.getCategory() != null ? tour.getCategory().getName() : null)
-                .transportationId(tour.getTransportation() != null ? tour.getTransportation().getId() : null)
-                .transportationType(tour.getTransportation() != null ? tour.getTransportation().getType() : null)
-                .createdAt(tour.getCreatedAt())
-                .overview(tour.getOverview())
-                .itinerary(tour.getItinerary())
-                .inclusions(tour.getInclusions())
-                .exclusions(tour.getExclusions())
-                .policies(tour.getPolicies())
-                .rating(tour.getRating())
-                .reviewCount(tour.getReviewCount())
-                .images(imageResponses)
-                .destinations(destinationResponses)
-                .departures(tour.getDepartures() == null ? List.of() : tour.getDepartures().stream()
-                    .map(departure -> modelMapper.map(departure, DepartureResponse.class))
-                    .toList())
-                .build();
+        List<DepartureResponse> departureResponses = tour.getDepartures() == null ? List.of() :
+                tour.getDepartures().stream()
+                        .map(departure -> modelMapper.map(departure, DepartureResponse.class))
+                        .toList();
+
+        TourDetailResponse response = modelMapper.map(tour, TourDetailResponse.class);
+        response.setImages(imageResponses);
+        response.setDestinations(destinationResponses);
+        response.setDepartures(departureResponses);
+        response.setCategoryId(tour.getCategory() != null ? tour.getCategory().getId() : null);
+        response.setCategoryName(tour.getCategory() != null ? tour.getCategory().getName() : null);
+        response.setTransportationId(tour.getTransportation() != null ? tour.getTransportation().getId() : null);
+        response.setTransportationType(tour.getTransportation() != null ? tour.getTransportation().getType() : null);
+
+        return response;
     }
 
     private String getCurrentUser() {
