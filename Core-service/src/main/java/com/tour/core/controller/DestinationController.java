@@ -6,14 +6,12 @@ import com.tour.core.dto.response.DestinationResponse;
 import com.tour.core.service.DestinationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/core/destinations")
@@ -61,22 +59,45 @@ public class DestinationController {
                 .build());
     }
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Create destination")
-    public ResponseEntity<ApiResponse> create(@Valid @RequestBody DestinationRequest request) {
-        DestinationResponse destination = destinationService.create(request);
-        return ResponseEntity.status(201).body(ApiResponse.builder()
+    public ResponseEntity<ApiResponse> create(
+            @RequestParam("cityName") String cityName,
+            @RequestParam(value = "region", required = false) String region,
+            @RequestParam("country") String country,
+            @RequestParam(value = "imageUrl", required = false) String imageUrl,
+            @RequestPart(value = "file", required = false) MultipartFile file) {
+            DestinationRequest request = DestinationRequest.builder()
+                .cityName(cityName)
+                .region(region)
+                .country(country)
+                .imageUrl(imageUrl)
+                .build();
+            DestinationResponse destination = destinationService.create(request, file);
+            return ResponseEntity.status(201).body(ApiResponse.builder()
                 .status(201)
                 .message("Thêm điểm đến thành công")
                 .data(destination)
                 .build());
     }
 
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Update destination")
-    public ResponseEntity<ApiResponse> update(@PathVariable Long id, @Valid @RequestBody DestinationRequest request) {
-        DestinationResponse destination = destinationService.update(id, request);
-        return ResponseEntity.ok(ApiResponse.builder()
+    public ResponseEntity<ApiResponse> update(
+            @PathVariable Long id,
+            @RequestParam("cityName") String cityName,
+            @RequestParam(value = "region", required = false) String region,
+            @RequestParam("country") String country,
+            @RequestParam(value = "imageUrl", required = false) String imageUrl,
+            @RequestPart(value = "file", required = false) MultipartFile file) {
+            DestinationRequest request = DestinationRequest.builder()
+                .cityName(cityName)
+                .region(region)
+                .country(country)
+                .imageUrl(imageUrl)
+                .build();
+            DestinationResponse destination = destinationService.update(id, request, file);
+            return ResponseEntity.ok(ApiResponse.builder()
                 .status(200)
                 .message("Cập nhật điểm đến thành công")
                 .data(destination)
@@ -91,17 +112,6 @@ public class DestinationController {
                 .status(200)
                 .message("Xóa điểm đến thành công")
                 .data(null)
-                .build());
-    }
-
-    @PostMapping(value = "/upload-image", consumes = "multipart/form-data")
-    @Operation(summary = "Upload image cho destination")
-    public ResponseEntity<ApiResponse> uploadImage(@RequestParam("file") MultipartFile file) {
-        String imageUrl = destinationService.uploadImage(file);
-        return ResponseEntity.ok(ApiResponse.builder()
-                .status(200)
-                .message("Upload ảnh điểm đến thành công")
-                .data(Map.of("imageUrl", imageUrl))
                 .build());
     }
 }

@@ -13,11 +13,9 @@ public interface DestinationService {
 
     Page<DestinationResponse> search(String keyword, int page, int size);
 
-    DestinationResponse create(DestinationRequest request);
+    DestinationResponse create(DestinationRequest request, MultipartFile file);
 
-    DestinationResponse update(Long id, DestinationRequest request);
+    DestinationResponse update(Long id, DestinationRequest request, MultipartFile file);
 
     void delete(Long id);
-
-    String uploadImage(MultipartFile file);
 }

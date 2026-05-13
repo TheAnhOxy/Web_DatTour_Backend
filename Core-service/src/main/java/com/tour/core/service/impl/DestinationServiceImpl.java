@@ -62,9 +62,24 @@ public class DestinationServiceImpl implements DestinationService {
     @Override
     @CacheEvict(value = "destinations", allEntries = true)
     @Transactional
-    public DestinationResponse create(DestinationRequest request) {
+    public DestinationResponse create(DestinationRequest request, MultipartFile file) {
+        String uploadedImageUrl = null;
+        if (file != null && !file.isEmpty()) {
+            uploadedImageUrl = s3StorageService.upload(file, "destinations");
+            request.setImageUrl(uploadedImageUrl);
+        }
+
         Destination destination = applyRequest(new Destination(), request);
-        Destination savedDestination = destinationRepository.save(destination);
+        Destination savedDestination;
+        try {
+            savedDestination = destinationRepository.save(destination);
+        } catch (RuntimeException ex) {
+            if (uploadedImageUrl != null && !uploadedImageUrl.isBlank()) {
+                s3StorageService.deleteByUrl(uploadedImageUrl);
+            }
+            throw ex;
+        }
+
         log.info("Created destination - id={}, cityName={}, country={}, by={}", 
             savedDestination.getId(), savedDestination.getCityName(), savedDestination.getCountry(), getCurrentUser());
         return modelMapper.map(savedDestination, DestinationResponse.class);
@@ -73,14 +88,29 @@ public class DestinationServiceImpl implements DestinationService {
     @Override
     @CacheEvict(value = "destinations", allEntries = true)
     @Transactional
-    public DestinationResponse update(Long id, DestinationRequest request) {
+    public DestinationResponse update(Long id, DestinationRequest request, MultipartFile file) {
         Destination destination = destinationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Điểm đến không tồn tại: " + id));
 
         String previousImageUrl = destination.getImageUrl();
+        String uploadedImageUrl = null;
+        if (file != null && !file.isEmpty()) {
+            uploadedImageUrl = s3StorageService.upload(file, "destinations");
+            request.setImageUrl(uploadedImageUrl);
+        }
+
         String nextImageUrl = request.getImageUrl();
         applyRequest(destination, request);
-        Destination savedDestination = destinationRepository.save(destination);
+
+        Destination savedDestination;
+        try {
+            savedDestination = destinationRepository.save(destination);
+        } catch (RuntimeException ex) {
+            if (uploadedImageUrl != null && !uploadedImageUrl.isBlank()) {
+                s3StorageService.deleteByUrl(uploadedImageUrl);
+            }
+            throw ex;
+        }
 
         if (nextImageUrl != null
             && previousImageUrl != null && !previousImageUrl.isBlank()
@@ -102,11 +132,6 @@ public class DestinationServiceImpl implements DestinationService {
         destinationRepository.delete(destination);
         log.info("Deleted destination - id={}, cityName={}, country={}, by={}", 
             destination.getId(), destination.getCityName(), destination.getCountry(), getCurrentUser());
-    }
-
-    @Override
-    public String uploadImage(MultipartFile file) {
-        return s3StorageService.upload(file, "destinations");
     }
 
     private Destination applyRequest(Destination destination, DestinationRequest request) {
