@@ -16,15 +16,18 @@ public interface TourRepository extends JpaRepository<Tour, Long> {
     boolean existsBySlug(String slug);
 
     @Query("""
-            SELECT t FROM Tour t
+            SELECT DISTINCT t FROM Tour t
+            LEFT JOIN t.destinations d
             WHERE (:status IS NULL OR t.status = :status)
               AND (:categoryId IS NULL OR t.category.id = :categoryId)
               AND (:isHot IS NULL OR t.isHot = :isHot)
+              AND (:destinationId IS NULL OR d.id = :destinationId)
             """)
     Page<Tour> findByFilters(
             @Param("status") String status,
             @Param("categoryId") Long categoryId,
             @Param("isHot") Boolean isHot,
+            @Param("destinationId") Long destinationId,
             Pageable pageable
     );
 }

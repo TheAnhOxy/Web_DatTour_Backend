@@ -59,20 +59,20 @@ public class TourServiceImpl implements TourService {
     private final RedissonClient redissonClient;
 
     @Override
-    @Cacheable(value = "tours", key = "'customer:' + (#categoryId == null ? 'ALL' : #categoryId) + ':' + (#isHot == null ? 'ALL' : #isHot) + ':' + #page + ':' + #size")
+    @Cacheable(value = "tours", key = "'customer:' + (#categoryId == null ? 'ALL' : #categoryId) + ':' + (#isHot == null ? 'ALL' : #isHot) + ':' + (#destinationId == null ? 'ALL' : #destinationId) + ':' + #page + ':' + #size")
     @Transactional(readOnly = true)
-    public Page<TourListResponse> getAllForCustomer(Long categoryId, Boolean isHot, int page, int size) {
+    public Page<TourListResponse> getAllForCustomer(Long categoryId, Boolean isHot, Long destinationId, int page, int size) {
         Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size));
-        Page<Tour> tours = tourRepository.findByFilters("ACTIVE", categoryId, isHot, pageable);
+        Page<Tour> tours = tourRepository.findByFilters("ACTIVE", categoryId, isHot, destinationId, pageable);
         return tours.map(this::toListResponse);
     }
 
     @Override
-    @Cacheable(value = "tours", key = "'admin:' + (#status == null ? 'ALL' : #status) + ':' + (#categoryId == null ? 'ALL' : #categoryId) + ':' + (#isHot == null ? 'ALL' : #isHot) + ':' + #page + ':' + #size")
+    @Cacheable(value = "tours", key = "'admin:' + (#status == null ? 'ALL' : #status) + ':' + (#categoryId == null ? 'ALL' : #categoryId) + ':' + (#isHot == null ? 'ALL' : #isHot) + ':' + (#destinationId == null ? 'ALL' : #destinationId) + ':' + #page + ':' + #size")
     @Transactional(readOnly = true)
-    public Page<TourListResponse> getAllForAdmin(String status, Long categoryId, Boolean isHot, int page, int size) {
+    public Page<TourListResponse> getAllForAdmin(String status, Long categoryId, Boolean isHot, Long destinationId, int page, int size) {
         Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size));
-        Page<Tour> tours = tourRepository.findByFilters(status, categoryId, isHot, pageable);
+        Page<Tour> tours = tourRepository.findByFilters(status, categoryId, isHot, destinationId, pageable);
         return tours.map(this::toListResponse);
     }
 
