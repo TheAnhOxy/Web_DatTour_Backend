@@ -83,4 +83,25 @@ public class Tour {
         @JoinTable(name = "tour_promotions", joinColumns = @JoinColumn(name = "tour_id"), inverseJoinColumns = @JoinColumn(name = "promotion_id"))
         private Set<Promotion> promotions;
 
+    @Column(columnDefinition = "TEXT")
+    private String overview;
+
+    @Column(columnDefinition = "jsonb")
+    private String itinerary;
+
+    @Column(columnDefinition = "jsonb")
+    private String inclusions;
+
+    @Column(columnDefinition = "jsonb")
+    private String exclusions;
+
+    @Column(columnDefinition = "jsonb")
+    private String policies;
+
+    @Builder.Default
+    private BigDecimal rating = BigDecimal.ZERO;
+
+    @Builder.Default
+    private Integer reviewCount = 0;
+
 }
