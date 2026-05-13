@@ -4,6 +4,7 @@ import com.tour.identity.dto.event.NotificationEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -19,12 +20,16 @@ import java.util.Map;
 @Configuration
 public class KafkaConsumerConfig {
 
+    // local: localhost:29092 | docker: kafka:9092 (set via KAFKA_BOOTSTRAP_SERVERS env)
+    @Value("${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}")
+    private String bootstrapServers;
+
     @Bean
     public ConsumerFactory<String, NotificationEvent> consumerFactory() {
 
         // Config Kafka
         Map<String, Object> props = new HashMap<>();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "notification-group");
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 

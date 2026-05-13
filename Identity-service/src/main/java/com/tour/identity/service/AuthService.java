@@ -11,6 +11,7 @@ import java.util.Map;
 public interface AuthService {
 
     LoginResponse login(LoginRequest request);
+    LoginResponse refreshToken(RefreshTokenRequest request);
     void logout(String token);
     void register(RegisterRequest request);
     void forgotPassword(String email);

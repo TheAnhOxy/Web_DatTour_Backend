@@ -66,6 +66,16 @@ public class AuthController {
                 .build());
     }
 
+    @PostMapping("/refresh-token")
+    public ResponseEntity<ApiResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
+        LoginResponse response = authService.refreshToken(request);
+        return ResponseEntity.ok(ApiResponse.builder()
+                .status(200)
+                .message("Token refreshed successfully")
+                .data(response)
+                .build());
+    }
+
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse> logout(@RequestHeader("Authorization") String authHeader) {
         String token = authHeader.substring(7);

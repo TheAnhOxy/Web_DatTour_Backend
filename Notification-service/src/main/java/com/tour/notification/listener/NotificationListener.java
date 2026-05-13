@@ -23,6 +23,13 @@ public class NotificationListener {
                 case "WELCOME_EMAIL":
                     emailService.sendWelcomeEmail(event.getRecipient(), (String) event.getParam().get("name"));
                     break;
+                case "REGISTRATION_OTP":
+                    emailService.sendRegistrationOtpEmail(
+                        event.getRecipient(),
+                        (String) event.getParam().get("name"),
+                        (String) event.getParam().get("otp")
+                    );
+                    break;
                 case "FORGOT_PASSWORD":
                     emailService.sendOtpEmail(event.getRecipient(), (String) event.getParam().get("otp"));
                     break;
