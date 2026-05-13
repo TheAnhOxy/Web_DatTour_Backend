@@ -18,59 +18,69 @@ import java.util.Set;
 @Builder
 public class Tour {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        private Long id;
 
-    private String title;
+        private String title;
 
-    @Column(unique = true)
-    private String slug;
+        @Column(unique = true)
+        private String slug;
 
-    @Column(columnDefinition = "TEXT")
-    private String description;
+        @Column(columnDefinition = "TEXT")
+        private String description;
 
-    private Integer durationDays;
+        private Integer durationDays;
 
-    private String status; // active
+        private String status; // active
 
-    @Builder.Default
-    private Boolean isHot = false;
+        @Builder.Default
+        private Boolean isHot = false;
 
-    private BigDecimal basePrice;
+        private BigDecimal basePrice;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id")
-    private TourCategory category;
+        @ManyToOne(fetch = FetchType.LAZY)
+        @JoinColumn(name = "category_id")
+        private TourCategory category;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "transportation_id")
-    private Transportation transportation;
+        @ManyToOne(fetch = FetchType.LAZY)
+        @JoinColumn(name = "transportation_id")
+        private Transportation transportation;
 
-    @OneToMany(mappedBy = "tour", cascade = CascadeType.ALL)
-    private List<TourImage> images;
+        @OneToMany(mappedBy = "tour", cascade = CascadeType.ALL)
+        private List<TourImage> images;
 
-    @ManyToMany
-    @JoinTable(
-            name = "tour_destinations",
-            joinColumns = @JoinColumn(name = "tour_id"),
-            inverseJoinColumns = @JoinColumn(name = "destination_id")
-    )
-    private Set<Destination> destinations;
+        @ManyToMany
+        @JoinTable(name = "tour_destinations", joinColumns = @JoinColumn(name = "tour_id"), inverseJoinColumns = @JoinColumn(name = "destination_id"))
+        private Set<Destination> destinations;
 
-    @OneToMany(mappedBy = "tour")
-    private List<Departure> departures;
+        @OneToMany(mappedBy = "tour")
+        private List<Departure> departures;
 
-    @CreationTimestamp
-    private LocalDateTime createdAt;
+        @Column(columnDefinition = "TEXT")
+        private String overview;
 
+        @Column(columnDefinition = "jsonb")
+        private String itinerary;
 
-    @ManyToMany
-    @JoinTable(
-            name = "tour_promotions",
-            joinColumns = @JoinColumn(name = "tour_id"),
-            inverseJoinColumns = @JoinColumn(name = "promotion_id")
-    )
-    private Set<Promotion> promotions;
+        @Column(columnDefinition = "jsonb")
+        private String inclusions;
+
+        @Column(columnDefinition = "jsonb")
+        private String exclusions;
+
+        @Column(columnDefinition = "jsonb")
+        private String policies;
+
+        private BigDecimal rating;
+
+        private Integer reviewCount;
+
+        @CreationTimestamp
+        private LocalDateTime createdAt;
+
+        @ManyToMany
+        @JoinTable(name = "tour_promotions", joinColumns = @JoinColumn(name = "tour_id"), inverseJoinColumns = @JoinColumn(name = "promotion_id"))
+        private Set<Promotion> promotions;
 
 }

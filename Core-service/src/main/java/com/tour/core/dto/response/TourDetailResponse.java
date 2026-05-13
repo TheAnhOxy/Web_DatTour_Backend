@@ -43,6 +43,14 @@ public class TourDetailResponse implements Serializable {
     private String transportationType;
 
     private LocalDateTime createdAt;
+    
+    private String overview;
+    private String itinerary;
+    private String inclusions;
+    private String exclusions;
+    private String policies;
+    private BigDecimal rating;
+    private Integer reviewCount;
 
     private List<TourImageResponse> images;
 
