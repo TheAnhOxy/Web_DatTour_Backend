@@ -14,6 +14,10 @@ spring:
   profiles:
     active: dev
 
+  kafka:
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
   datasource:
     url: jdbc:postgresql://ep-red-river-amkvj9tx-pooler.c-5.us-east-1.aws.neon.tech:5432/core_db?sslmode=require&channel_binding=require&currentSchema=public
     username: core_user

@@ -42,6 +42,14 @@ public class SecurityConfig {
                                 "/actuator/**"
                         ).permitAll()
 
+                        // PUBLIC APIs
+                        .requestMatchers(HttpMethod.GET,
+                                "/core/tours",
+                                "/core/tours/**",
+                                "/core/departures/**",
+                                "/core/destinations/**"
+                        ).permitAll()
+
                         // ADMIN
                         .requestMatchers(HttpMethod.GET, "/core/tours/admin")
                         .hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")

@@ -35,6 +35,8 @@ public class TourListResponse implements Serializable {
 
     private Integer durationDays;
 
+    private String region;
+
     private Long departureId;
 
     private LocalDateTime departureStartDate;

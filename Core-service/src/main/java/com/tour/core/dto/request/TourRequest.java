@@ -44,6 +44,14 @@ public class TourRequest {
     private List<Long> destinationIds;
     private List<DepartureRequest> departures;
 
+    private String overview;
+    private String itinerary;
+    private String inclusions;
+    private String exclusions;
+    private String policies;
+    private BigDecimal rating;
+    private Integer reviewCount;
+
     @Valid
     private List<TourImageRequest> images;
 }

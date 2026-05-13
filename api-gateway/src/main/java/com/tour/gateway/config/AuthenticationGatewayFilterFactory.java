@@ -38,7 +38,9 @@ public class AuthenticationGatewayFilterFactory extends AbstractGatewayFilterFac
 
             "/v3/api-docs/**",
             "/swagger-ui/**",
-            "/swagger-resources/**"
+            "/swagger-resources/**",
+            "/core/**",
+            "/bookings/**"
     );
 
     public AuthenticationGatewayFilterFactory(WebClient.Builder webClientBuilder, ObjectMapper objectMapper) {

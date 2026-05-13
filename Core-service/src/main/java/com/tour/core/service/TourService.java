@@ -7,9 +7,9 @@ import org.springframework.data.domain.Page;
 
 public interface TourService {
 
-    Page<TourListResponse> getAllForCustomer(Long categoryId, Boolean isHot, int page, int size);
+    Page<TourListResponse> getAllForCustomer(Long categoryId, Boolean isHot, Long destinationId, int page, int size);
 
-    Page<TourListResponse> getAllForAdmin(String status, Long categoryId, Boolean isHot, int page, int size);
+    Page<TourListResponse> getAllForAdmin(String status, Long categoryId, Boolean isHot, Long destinationId, int page, int size);
 
     TourDetailResponse getById(Long id);
 

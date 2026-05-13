@@ -14,6 +14,8 @@ import com.tour.core.entity.TourCategory;
 import com.tour.core.entity.TourImage;
 import com.tour.core.entity.Departure;
 import com.tour.core.entity.Transportation;
+import com.tour.core.event.DepartureEvent;
+import com.tour.core.event.TourSearchEvent;
 import com.tour.core.exception.InvalidDataException;
 import com.tour.core.exception.ResourceNotFoundException;
 import com.tour.core.repository.DestinationRepository;
@@ -34,6 +36,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -57,22 +60,23 @@ public class TourServiceImpl implements TourService {
     private final DepartureRepository departureRepository;
     private final ModelMapper modelMapper;
     private final RedissonClient redissonClient;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @Override
-    @Cacheable(value = "tours", key = "'customer:' + (#categoryId == null ? 'ALL' : #categoryId) + ':' + (#isHot == null ? 'ALL' : #isHot) + ':' + #page + ':' + #size")
+    @Cacheable(value = "tours", key = "'customer:' + (#categoryId == null ? 'ALL' : #categoryId) + ':' + (#isHot == null ? 'ALL' : #isHot) + ':' + (#destinationId == null ? 'ALL' : #destinationId) + ':' + #page + ':' + #size")
     @Transactional(readOnly = true)
-    public Page<TourListResponse> getAllForCustomer(Long categoryId, Boolean isHot, int page, int size) {
+    public Page<TourListResponse> getAllForCustomer(Long categoryId, Boolean isHot, Long destinationId, int page, int size) {
         Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size));
-        Page<Tour> tours = tourRepository.findByFilters("ACTIVE", categoryId, isHot, pageable);
+        Page<Tour> tours = tourRepository.findByFilters("ACTIVE", categoryId, isHot, destinationId, pageable);
         return tours.map(this::toListResponse);
     }
 
     @Override
-    @Cacheable(value = "tours", key = "'admin:' + (#status == null ? 'ALL' : #status) + ':' + (#categoryId == null ? 'ALL' : #categoryId) + ':' + (#isHot == null ? 'ALL' : #isHot) + ':' + #page + ':' + #size")
+    @Cacheable(value = "tours", key = "'admin:' + (#status == null ? 'ALL' : #status) + ':' + (#categoryId == null ? 'ALL' : #categoryId) + ':' + (#isHot == null ? 'ALL' : #isHot) + ':' + (#destinationId == null ? 'ALL' : #destinationId) + ':' + #page + ':' + #size")
     @Transactional(readOnly = true)
-    public Page<TourListResponse> getAllForAdmin(String status, Long categoryId, Boolean isHot, int page, int size) {
+    public Page<TourListResponse> getAllForAdmin(String status, Long categoryId, Boolean isHot, Long destinationId, int page, int size) {
         Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size));
-        Page<Tour> tours = tourRepository.findByFilters(status, categoryId, isHot, pageable);
+        Page<Tour> tours = tourRepository.findByFilters(status, categoryId, isHot, destinationId, pageable);
         return tours.map(this::toListResponse);
     }
 
@@ -117,6 +121,17 @@ public class TourServiceImpl implements TourService {
         tour.setIsHot(Boolean.TRUE.equals(request.getIsHot()));
 
         Tour savedTour = tourRepository.save(tour);
+
+        TourSearchEvent event = TourSearchEvent.builder()
+                .tourId(savedTour.getId())
+                .title(savedTour.getTitle())
+                .destinations(savedTour.getDestinations().stream().map(Destination::getCityName).toList())
+                .departures(savedTour.getDepartures().stream()
+                        .map(d -> DepartureEvent.builder().id(d.getId()).startDate(d.getStartDate()).endDate(d.getEndDate()).build())
+                        .toList())
+                .build();
+        kafkaTemplate.send("tour-search-topic", event);
+
         saveTourImages(savedTour, request.getImages());
         
         // kiểm tra nếu có departures, nếu không có thì throw lỗi vì tour phải có ít nhất 1 lịch khởi hành để khách đặt
@@ -156,6 +171,22 @@ public class TourServiceImpl implements TourService {
         tour.setIsHot(Boolean.TRUE.equals(request.getIsHot()));
 
         Tour savedTour = tourRepository.save(tour);
+        // BẮN KAFKA ĐỂ SEARCH SERVICE CẬP NHẬT:
+        TourSearchEvent event = TourSearchEvent.builder()
+                .tourId(savedTour.getId())
+                .title(savedTour.getTitle())
+                .destinations(savedTour.getDestinations().stream()
+                        .map(Destination::getCityName) // Lấy tên thành phố từ ID
+                        .toList())
+                .departures(savedTour.getDepartures().stream()
+                        .map(d -> DepartureEvent.builder()
+                                .id(d.getId())
+                                .startDate(d.getStartDate())
+                                .endDate(d.getEndDate())
+                                .build())
+                        .toList())
+                .build();
+        kafkaTemplate.send("tour-search-topic", event);
 
         // nếu gửi danh sách departures thì phải có ít nhất một mục, nếu không gửi thì giữ nguyên lịch khởi hành cũ
         if (request.getDepartures() != null) {
@@ -282,6 +313,8 @@ public class TourServiceImpl implements TourService {
                 .coverImageUrl(coverImageUrl)
                 .categoryName(tour.getCategory() != null ? tour.getCategory().getName() : null)
                 .durationDays(tour.getDurationDays())
+                .region(tour.getDestinations() != null && !tour.getDestinations().isEmpty() 
+                        ? tour.getDestinations().iterator().next().getRegion() : null)
                 .departureId(nextDeparture != null ? nextDeparture.getId() : null)
                 .departureStartDate(nextDeparture != null ? nextDeparture.getStartDate() : null)
                 .pickupName(nextDeparture != null ? nextDeparture.getPickupName() : null)
@@ -326,6 +359,13 @@ public class TourServiceImpl implements TourService {
                 .transportationId(tour.getTransportation() != null ? tour.getTransportation().getId() : null)
                 .transportationType(tour.getTransportation() != null ? tour.getTransportation().getType() : null)
                 .createdAt(tour.getCreatedAt())
+                .overview(tour.getOverview())
+                .itinerary(tour.getItinerary())
+                .inclusions(tour.getInclusions())
+                .exclusions(tour.getExclusions())
+                .policies(tour.getPolicies())
+                .rating(tour.getRating())
+                .reviewCount(tour.getReviewCount())
                 .images(imageResponses)
                 .destinations(destinationResponses)
                 .departures(tour.getDepartures() == null ? List.of() : tour.getDepartures().stream()
