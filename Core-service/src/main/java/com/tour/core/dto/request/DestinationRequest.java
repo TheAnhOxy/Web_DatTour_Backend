@@ -19,4 +19,6 @@ public class DestinationRequest {
 
     @NotBlank(message = "Tên quốc gia không được trống")
     private String country;
+
+    private String imageUrl;
 }

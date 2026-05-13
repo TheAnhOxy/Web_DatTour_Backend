@@ -10,6 +10,18 @@ spring:
     name: api-gateway
   profiles:
     active: dev
+  cloud:
+    gateway:
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins: 
+              - "http://localhost:3000"
+              - "http://127.0.0.1:3000"
+              - "http://192.168.1.71:3000"
+            allowedHeaders: "*"
+            allowedMethods: "*"
+            allowCredentials: true
 
 eureka:
   client:

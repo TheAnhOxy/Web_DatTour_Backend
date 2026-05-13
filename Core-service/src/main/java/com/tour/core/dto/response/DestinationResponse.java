@@ -22,4 +22,6 @@ public class DestinationResponse implements Serializable {
     private String region;
 
     private String country;
+
+    private String imageUrl;
 }

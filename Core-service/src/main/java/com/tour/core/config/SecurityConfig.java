@@ -46,7 +46,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET,
                                 "/core/tours",
                                 "/core/tours/**",
-                                "/core/departures/**"
+                                "/core/departures/**",
+                                "/core/destinations/**"
                         ).permitAll()
 
                         // ADMIN

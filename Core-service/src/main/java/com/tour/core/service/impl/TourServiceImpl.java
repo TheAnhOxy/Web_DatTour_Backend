@@ -288,6 +288,8 @@ public class TourServiceImpl implements TourService {
                 .coverImageUrl(coverImageUrl)
                 .categoryName(tour.getCategory() != null ? tour.getCategory().getName() : null)
                 .durationDays(tour.getDurationDays())
+                .region(tour.getDestinations() != null && !tour.getDestinations().isEmpty() 
+                        ? tour.getDestinations().iterator().next().getRegion() : null)
                 .departureId(nextDeparture != null ? nextDeparture.getId() : null)
                 .departureStartDate(nextDeparture != null ? nextDeparture.getStartDate() : null)
                 .pickupName(nextDeparture != null ? nextDeparture.getPickupName() : null)
