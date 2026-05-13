@@ -15,5 +15,7 @@ public class Destination {
     private String cityName;
     private String region;
     private String country;
-    private String image_url;
+
+    @Column(name = "image_url")
+    private String imageUrl;
 }

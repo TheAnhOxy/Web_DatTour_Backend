@@ -6,6 +6,7 @@ import com.tour.core.entity.Destination;
 import com.tour.core.exception.ResourceNotFoundException;
 import com.tour.core.repository.DestinationRepository;
 import com.tour.core.service.DestinationService;
+import com.tour.core.service.S3StorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -18,6 +19,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +28,7 @@ public class DestinationServiceImpl implements DestinationService {
 
     private final DestinationRepository destinationRepository;
     private final ModelMapper modelMapper;
+    private final S3StorageService s3StorageService;
 
     @Override
     @Cacheable(value = "destinations", key = "'all:' + #page + ':' + #size")
@@ -60,7 +63,7 @@ public class DestinationServiceImpl implements DestinationService {
     @CacheEvict(value = "destinations", allEntries = true)
     @Transactional
     public DestinationResponse create(DestinationRequest request) {
-        Destination destination = modelMapper.map(request, Destination.class);
+        Destination destination = applyRequest(new Destination(), request);
         Destination savedDestination = destinationRepository.save(destination);
         log.info("Created destination - id={}, cityName={}, country={}, by={}", 
             savedDestination.getId(), savedDestination.getCityName(), savedDestination.getCountry(), getCurrentUser());
@@ -74,8 +77,17 @@ public class DestinationServiceImpl implements DestinationService {
         Destination destination = destinationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Điểm đến không tồn tại: " + id));
 
-        modelMapper.map(request, destination);
+        String previousImageUrl = destination.getImageUrl();
+        String nextImageUrl = request.getImageUrl();
+        applyRequest(destination, request);
         Destination savedDestination = destinationRepository.save(destination);
+
+        if (nextImageUrl != null
+            && previousImageUrl != null && !previousImageUrl.isBlank()
+            && !previousImageUrl.equals(nextImageUrl)) {
+            s3StorageService.deleteByUrl(previousImageUrl);
+        }
+
         log.info("Updated destination - id={}, cityName={}, country={}, by={}", 
             savedDestination.getId(), savedDestination.getCityName(), savedDestination.getCountry(), getCurrentUser());
         return modelMapper.map(savedDestination, DestinationResponse.class);
@@ -90,6 +102,21 @@ public class DestinationServiceImpl implements DestinationService {
         destinationRepository.delete(destination);
         log.info("Deleted destination - id={}, cityName={}, country={}, by={}", 
             destination.getId(), destination.getCityName(), destination.getCountry(), getCurrentUser());
+    }
+
+    @Override
+    public String uploadImage(MultipartFile file) {
+        return s3StorageService.upload(file, "destinations");
+    }
+
+    private Destination applyRequest(Destination destination, DestinationRequest request) {
+        destination.setCityName(request.getCityName());
+        destination.setRegion(request.getRegion());
+        destination.setCountry(request.getCountry());
+        if (request.getImageUrl() != null) {
+            destination.setImageUrl(request.getImageUrl());
+        }
+        return destination;
     }
 
     private String getCurrentUser() {

@@ -11,6 +11,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/core/destinations")
@@ -88,6 +91,17 @@ public class DestinationController {
                 .status(200)
                 .message("Xóa điểm đến thành công")
                 .data(null)
+                .build());
+    }
+
+    @PostMapping(value = "/upload-image", consumes = "multipart/form-data")
+    @Operation(summary = "Upload image cho destination")
+    public ResponseEntity<ApiResponse> uploadImage(@RequestParam("file") MultipartFile file) {
+        String imageUrl = destinationService.uploadImage(file);
+        return ResponseEntity.ok(ApiResponse.builder()
+                .status(200)
+                .message("Upload ảnh điểm đến thành công")
+                .data(Map.of("imageUrl", imageUrl))
                 .build());
     }
 }

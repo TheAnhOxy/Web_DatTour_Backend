@@ -1,5 +1,7 @@
 package com.tour.core.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,4 +24,8 @@ public class DestinationResponse implements Serializable {
     private String region;
 
     private String country;
+
+    @JsonProperty("image_url")
+    @JsonAlias("imageUrl")
+    private String imageUrl;
 }

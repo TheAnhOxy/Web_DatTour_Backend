@@ -3,6 +3,7 @@ package com.tour.core.service;
 import com.tour.core.dto.request.DestinationRequest;
 import com.tour.core.dto.response.DestinationResponse;
 import org.springframework.data.domain.Page;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface DestinationService {
 
@@ -17,4 +18,6 @@ public interface DestinationService {
     DestinationResponse update(Long id, DestinationRequest request);
 
     void delete(Long id);
+
+    String uploadImage(MultipartFile file);
 }
