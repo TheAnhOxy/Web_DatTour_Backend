@@ -37,4 +37,7 @@ public interface TourRepository extends JpaRepository<Tour, Long> {
 
     @Query("SELECT c.name, COUNT(t) FROM Tour t JOIN t.category c GROUP BY c.name ORDER BY COUNT(t) DESC")
     List<Object[]> countToursByCategory();
+
+        @Query("SELECT COUNT(t) FROM Tour t WHERE t.category.id = :categoryId")
+        Long countByCategoryId(@Param("categoryId") Long categoryId);
 }

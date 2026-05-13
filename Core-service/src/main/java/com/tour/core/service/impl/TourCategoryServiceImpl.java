@@ -5,6 +5,7 @@ import com.tour.core.dto.response.CategoryResponse;
 import com.tour.core.entity.TourCategory;
 import com.tour.core.exception.InvalidDataException;
 import com.tour.core.exception.ResourceNotFoundException;
+import com.tour.core.repository.TourRepository;
 import com.tour.core.repository.TourCategoryRepository;
 import com.tour.core.service.TourCategoryService;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +18,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.springframework.data.domain.PageRequest;
 
 @Service
@@ -26,15 +29,22 @@ import org.springframework.data.domain.PageRequest;
 public class TourCategoryServiceImpl implements TourCategoryService {
 
     private final TourCategoryRepository tourCategoryRepository;
+    private final TourRepository tourRepository;
     private final ModelMapper modelMapper;
 
     @Override
     @Cacheable(value = "categories", key = "'all'")
     @Transactional(readOnly = true)
     public List<CategoryResponse> getAll() {
+        Map<String, Long> tourCountsByName = tourRepository.countToursByCategory().stream()
+                .collect(Collectors.toMap(
+                        row -> String.valueOf(row[0]),
+                        row -> ((Number) row[1]).longValue()
+                ));
+
         return tourCategoryRepository.findAll()
                 .stream()
-                .map(category -> modelMapper.map(category, CategoryResponse.class))
+                .map(category -> toResponse(category, tourCountsByName.getOrDefault(category.getName(), 0L)))
                 .toList();
     }
 
@@ -44,7 +54,7 @@ public class TourCategoryServiceImpl implements TourCategoryService {
     public CategoryResponse getById(Long id) {
         TourCategory category = tourCategoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Danh mục không tồn tại: " + id));
-        return modelMapper.map(category, CategoryResponse.class);
+        return toResponse(category, tourRepository.countByCategoryId(category.getId()));
     }
 
     @Override
@@ -58,7 +68,7 @@ public class TourCategoryServiceImpl implements TourCategoryService {
         TourCategory category = modelMapper.map(request, TourCategory.class);
         TourCategory savedCategory = tourCategoryRepository.save(category);
         log.info("Created tour category - id={}, name={}, by={}", savedCategory.getId(), savedCategory.getName(), getCurrentUser());
-        return modelMapper.map(savedCategory, CategoryResponse.class);
+        return toResponse(savedCategory, tourRepository.countByCategoryId(savedCategory.getId()));
     }
 
     @Override
@@ -75,7 +85,7 @@ public class TourCategoryServiceImpl implements TourCategoryService {
         modelMapper.map(request, category);
         TourCategory savedCategory = tourCategoryRepository.save(category);
         log.info("Updated tour category - id={}, name={}, by={}", savedCategory.getId(), savedCategory.getName(), getCurrentUser());
-        return modelMapper.map(savedCategory, CategoryResponse.class);
+        return toResponse(savedCategory, tourRepository.countByCategoryId(savedCategory.getId()));
     }
 
     @Override
@@ -92,7 +102,15 @@ public class TourCategoryServiceImpl implements TourCategoryService {
     @Transactional(readOnly = true)
     public List<CategoryResponse> getTopCategories(int limit) {
         List<TourCategory> top = tourCategoryRepository.findTopCategories(PageRequest.of(0, Math.max(1, limit)));
-        return top.stream().map(c -> modelMapper.map(c, CategoryResponse.class)).toList();
+        return top.stream()
+                .map(category -> toResponse(category, tourRepository.countByCategoryId(category.getId())))
+                .toList();
+    }
+
+    private CategoryResponse toResponse(TourCategory category, Long tourCount) {
+        CategoryResponse response = modelMapper.map(category, CategoryResponse.class);
+        response.setTourCount(tourCount == null ? 0L : tourCount);
+        return response;
     }
 
     private String getCurrentUser() {
