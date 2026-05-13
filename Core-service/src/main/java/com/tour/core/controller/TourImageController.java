@@ -4,17 +4,23 @@ import com.tour.core.dto.request.TourImageReorderRequest;
 import com.tour.core.dto.request.TourImageRequest;
 import com.tour.core.dto.response.ApiResponse;
 import com.tour.core.dto.response.TourImageResponse;
+import com.tour.core.exception.ResourceNotFoundException;
+import com.tour.core.repository.TourRepository;
+import com.tour.core.service.S3StorageService;
 import com.tour.core.service.TourImageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/core/tours/{tourId}/images")
@@ -25,6 +31,8 @@ import java.util.List;
 public class TourImageController {
 
     private final TourImageService tourImageService;
+    private final S3StorageService s3StorageService;
+    private final TourRepository tourRepository;
 
     @GetMapping
     @Operation(summary = "Lấy danh sách ảnh của tour theo sortOrder")
@@ -86,6 +94,25 @@ public class TourImageController {
                 .status(200)
                 .message("Sắp xếp ảnh thành công")
                 .data(images)
+                .build());
+    }
+
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Upload ảnh lên S3 và trả về URL")
+    public ResponseEntity<ApiResponse> uploadImage(
+            @PathVariable Long tourId,
+            @RequestParam("file") MultipartFile file) {
+        // Check tour tồn tại
+        if (!tourRepository.existsById(tourId)) {
+            throw new ResourceNotFoundException("Tour không tồn tại: " + tourId);
+        }
+
+        String imageUrl = s3StorageService.upload(file, "tours/" + tourId);
+
+        return ResponseEntity.ok(ApiResponse.builder()
+                .status(200)
+                .message("Upload ảnh thành công")
+                .data(Map.of("imageUrl", imageUrl))
                 .build());
     }
 }
