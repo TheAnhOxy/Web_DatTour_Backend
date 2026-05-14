@@ -183,6 +183,18 @@ public class DepartureServiceImpl implements DepartureService {
         resp.setTourTitle(d.getTour() != null ? d.getTour().getTitle() : null);
 
         PriceConfigResponse pc = priceConfigService.getByDepartureId(d.getId());
+        
+        // Nếu không có PriceConfig, tạo mặc định từ basePrice của Tour
+        if (pc == null && d.getTour() != null && d.getTour().getBasePrice() != null) {
+            java.math.BigDecimal base = d.getTour().getBasePrice();
+            pc = new PriceConfigResponse();
+            pc.setDepartureId(d.getId());
+            pc.setAdultPrice(base);
+            pc.setChild1014Price(base.multiply(new java.math.BigDecimal("0.75")).setScale(0, java.math.RoundingMode.HALF_UP));
+            pc.setChild49Price(base.multiply(new java.math.BigDecimal("0.50")).setScale(0, java.math.RoundingMode.HALF_UP));
+            pc.setBabyPrice(java.math.BigDecimal.ZERO);
+        }
+        
         resp.setPriceConfig(pc);
         return resp;
     }
