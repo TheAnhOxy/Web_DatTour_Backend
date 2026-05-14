@@ -28,7 +28,7 @@ public class DestinationServiceImpl implements DestinationService {
     private final ModelMapper modelMapper;
 
     @Override
-    @Cacheable(value = "destinations", key = "'all:' + #page + ':' + #size")
+    // @Cacheable(value = "destinations", key = "'all:' + #page + ':' + #size")
     @Transactional(readOnly = true)
     public Page<DestinationResponse> getAll(int page, int size) {
         Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size));
@@ -46,7 +46,7 @@ public class DestinationServiceImpl implements DestinationService {
     }
 
     @Override
-    @Cacheable(value = "destinations", key = "'search:' + #keyword + ':' + #page + ':' + #size")
+    // @Cacheable(value = "destinations", key = "'search:' + #keyword + ':' + #page + ':' + #size")
     @Transactional(readOnly = true)
     public Page<DestinationResponse> search(String keyword, int page, int size) {
         Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size));

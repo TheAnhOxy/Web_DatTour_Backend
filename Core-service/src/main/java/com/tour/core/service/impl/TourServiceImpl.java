@@ -63,7 +63,7 @@ public class TourServiceImpl implements TourService {
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @Override
-    @Cacheable(value = "tours", key = "'customer:' + (#categoryId == null ? 'ALL' : #categoryId) + ':' + (#isHot == null ? 'ALL' : #isHot) + ':' + (#destinationId == null ? 'ALL' : #destinationId) + ':' + #page + ':' + #size")
+    // @Cacheable(value = "tours", key = "'customer:' + (#categoryId == null ? 'ALL' : #categoryId) + ':' + (#isHot == null ? 'ALL' : #isHot) + ':' + (#destinationId == null ? 'ALL' : #destinationId) + ':' + #page + ':' + #size")
     @Transactional(readOnly = true)
     public Page<TourListResponse> getAllForCustomer(Long categoryId, Boolean isHot, Long destinationId, int page, int size) {
         Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size));
@@ -72,7 +72,7 @@ public class TourServiceImpl implements TourService {
     }
 
     @Override
-    @Cacheable(value = "tours", key = "'admin:' + (#status == null ? 'ALL' : #status) + ':' + (#categoryId == null ? 'ALL' : #categoryId) + ':' + (#isHot == null ? 'ALL' : #isHot) + ':' + (#destinationId == null ? 'ALL' : #destinationId) + ':' + #page + ':' + #size")
+    // @Cacheable(value = "tours", key = "'admin:' + (#status == null ? 'ALL' : #status) + ':' + (#categoryId == null ? 'ALL' : #categoryId) + ':' + (#isHot == null ? 'ALL' : #isHot) + ':' + (#destinationId == null ? 'ALL' : #destinationId) + ':' + #page + ':' + #size")
     @Transactional(readOnly = true)
     public Page<TourListResponse> getAllForAdmin(String status, Long categoryId, Boolean isHot, Long destinationId, int page, int size) {
         Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size));
@@ -81,7 +81,7 @@ public class TourServiceImpl implements TourService {
     }
 
     @Override
-    @Cacheable(value = "tours", key = "#id")
+    @Cacheable(value = "tour_details", key = "#id")
     @Transactional(readOnly = true)
     public TourDetailResponse getById(Long id) {
         Tour tour = findTourById(id);
@@ -89,7 +89,7 @@ public class TourServiceImpl implements TourService {
     }
 
     @Override
-    @Cacheable(value = "tours", key = "'slug:' + #slug")
+    @Cacheable(value = "tour_details", key = "'slug:' + #slug")
     @Transactional(readOnly = true)
     public TourDetailResponse getBySlug(String slug) {
         Tour tour = tourRepository.findBySlug(slug)
@@ -98,7 +98,10 @@ public class TourServiceImpl implements TourService {
     }
 
     @Override
-    @CacheEvict(value = "tours", allEntries = true)
+    @org.springframework.cache.annotation.Caching(evict = {
+        @CacheEvict(value = "tours", allEntries = true),
+        @CacheEvict(value = "tour_details", allEntries = true)
+    })
     @Transactional
     public TourDetailResponse create(TourRequest request) {
         String slug = buildUniqueSlug(request.getTitle());
@@ -146,7 +149,10 @@ public class TourServiceImpl implements TourService {
     }
 
     @Override
-    @CacheEvict(value = "tours", allEntries = true)
+    @org.springframework.cache.annotation.Caching(evict = {
+        @CacheEvict(value = "tours", allEntries = true),
+        @CacheEvict(value = "tour_details", allEntries = true)
+    })
     @Transactional
     public TourDetailResponse update(Long id, TourRequest request) {
         Tour tour = findTourById(id);
@@ -227,7 +233,10 @@ public class TourServiceImpl implements TourService {
     }
 
     @Override
-    @CacheEvict(value = "tours", allEntries = true)
+    @org.springframework.cache.annotation.Caching(evict = {
+        @CacheEvict(value = "tours", allEntries = true),
+        @CacheEvict(value = "tour_details", allEntries = true)
+    })
     @Transactional
     public void delete(Long id) {
         Tour tour = findTourById(id);
@@ -237,7 +246,10 @@ public class TourServiceImpl implements TourService {
     }
 
     @Override
-    @CacheEvict(value = "tours", allEntries = true)
+    @org.springframework.cache.annotation.Caching(evict = {
+        @CacheEvict(value = "tours", allEntries = true),
+        @CacheEvict(value = "tour_details", allEntries = true)
+    })
     @Transactional
     public TourDetailResponse toggleHot(Long id) {
         Tour tour = findTourById(id);
