@@ -49,8 +49,6 @@ public class TourRequest {
     private String inclusions;
     private String exclusions;
     private String policies;
-    private BigDecimal rating;
-    private Integer reviewCount;
 
     @Valid
     private List<TourImageRequest> images;

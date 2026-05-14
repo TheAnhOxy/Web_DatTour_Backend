@@ -33,4 +33,8 @@ public class TourSummaryResponse implements Serializable {
 	private String categoryName;
 
 	private Integer durationDays;
+
+	private BigDecimal rating;
+
+    private Integer reviewCount;
 }

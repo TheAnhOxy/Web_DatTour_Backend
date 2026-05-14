@@ -3,6 +3,8 @@ package com.tour.core.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -60,22 +62,28 @@ public class Tour {
         @Column(columnDefinition = "TEXT")
         private String overview;
 
+        @JdbcTypeCode(SqlTypes.JSON)
         @Column(columnDefinition = "jsonb")
         private String itinerary;
 
+        @JdbcTypeCode(SqlTypes.JSON)
         @Column(columnDefinition = "jsonb")
         private String inclusions;
 
+        @JdbcTypeCode(SqlTypes.JSON)
         @Column(columnDefinition = "jsonb")
         private String exclusions;
 
+        @JdbcTypeCode(SqlTypes.JSON)
         @Column(columnDefinition = "jsonb")
         private String policies;
 
         @Builder.Default
+        @Column(name = "rating")
         private BigDecimal rating = BigDecimal.ZERO;
 
         @Builder.Default
+        @Column(name = "review_count")
         private Integer reviewCount = 0;
 
         @CreationTimestamp
