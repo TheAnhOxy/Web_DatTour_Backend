@@ -17,6 +17,7 @@ public class TourImage {
     private Long id;
 
     private String imageUrl;
+    private String altText;
     private Boolean isCover;
     private Integer sortOrder;
 

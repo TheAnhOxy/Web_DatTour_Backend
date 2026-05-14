@@ -54,14 +54,39 @@ class AuthServiceImpl implements AuthService {
         String refreshToken = jwtUtils.generateRefreshToken(user);
 
         return LoginResponse.builder()
-                .token(accessToken)          // Access Token
-                .refreshToken(refreshToken) // Refresh Token
+                .token(accessToken)
+                .refreshToken(refreshToken)
                 .email(user.getEmail())
                 .userId(user.getId())
                 .build();
     }
 
+    @Override
+    public LoginResponse refreshToken(RefreshTokenRequest request) {
+        try {
+            // Xác thực refresh token (kiểm tra chữ ký + hết hạn)
+            var signedJWT = jwtUtils.verifyToken(request.getRefreshToken());
+            String email = signedJWT.getJWTClaimsSet().getSubject();
 
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("USER_NOT_FOUND"));
+
+            // Cấp cặp token mới
+            String newAccessToken  = jwtUtils.generateAccessToken(user);
+            String newRefreshToken = jwtUtils.generateRefreshToken(user);
+
+            log.info("Token refreshed for: {}", email);
+
+            return LoginResponse.builder()
+                    .token(newAccessToken)
+                    .refreshToken(newRefreshToken)
+                    .email(user.getEmail())
+                    .userId(user.getId())
+                    .build();
+        } catch (Exception e) {
+            throw new RuntimeException("REFRESH_TOKEN_INVALID");
+        }
+    }
 
 
     private static final String OTP_PREFIX = "OTP:";
@@ -90,16 +115,20 @@ class AuthServiceImpl implements AuthService {
 
         userRepository.save(user);
 
-        // Bắn event chào mừng qua Kafka
+        // Sinh OTP 6 số và lưu Redis (TTL 10 phút)
+        String otp = String.format("%06d", (int) (Math.random() * 1_000_000));
+        redisTemplate.opsForValue().set(OTP_PREFIX + user.getEmail(), otp, 10, TimeUnit.MINUTES);
+
+        // Gửi email chào mừng kèm OTP qua Kafka
         NotificationEvent event = NotificationEvent.builder()
                 .channel("EMAIL")
                 .recipient(user.getEmail())
-                .templateCode("WELCOME_EMAIL")
-                .param(Map.of("name", user.getFullName()))
+                .templateCode("REGISTRATION_OTP")
+                .param(Map.of("name", user.getFullName(), "otp", otp))
                 .build();
 
         kafkaTemplate.send("notification-topic", event);
-        log.info("Registration event sent for: {}", user.getEmail());
+        log.info("Registration OTP sent for: {}", user.getEmail());
     }
 
     @Override
