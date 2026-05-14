@@ -50,13 +50,16 @@ public class Tour {
         private Transportation transportation;
 
         @OneToMany(mappedBy = "tour", cascade = CascadeType.ALL)
+        @org.hibernate.annotations.BatchSize(size = 50)
         private List<TourImage> images;
 
         @ManyToMany
         @JoinTable(name = "tour_destinations", joinColumns = @JoinColumn(name = "tour_id"), inverseJoinColumns = @JoinColumn(name = "destination_id"))
+        @org.hibernate.annotations.BatchSize(size = 50)
         private Set<Destination> destinations;
 
         @OneToMany(mappedBy = "tour")
+        @org.hibernate.annotations.BatchSize(size = 50)
         private List<Departure> departures;
 
         @Column(columnDefinition = "TEXT")
