@@ -31,3 +31,11 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Environment variables ###
+.env
+.env.*
+!.env.example
+
+### Local dev config (chứa credentials, không commit) ###
+src/main/resources/application-dev.yml
