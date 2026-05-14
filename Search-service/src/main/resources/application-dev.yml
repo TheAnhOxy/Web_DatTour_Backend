@@ -5,6 +5,9 @@ spring:
   devtools:
     add-properties: true
 
+  kafka:
+    bootstrap-servers: localhost:29092
+
 #springdoc:
 #  api-docs:
 #    enabled: true

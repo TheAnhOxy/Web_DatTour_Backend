@@ -5,6 +5,25 @@ spring:
   devtools:
     add-properties: true
 
+  datasource:
+    url: jdbc:postgresql://ep-red-river-amkvj9tx-pooler.c-5.us-east-1.aws.neon.tech/payment_db?sslmode=require
+    username: neondb_owner
+    password: npg_1lr8XJZoFbMS
+
+  kafka:
+    bootstrap-servers: localhost:29092
+
+sepay:
+  bank-code: ICB
+  account-no: 109876820087
+  template: compact
+
+stripe:
+  secret-key: sk_test_REPLACE_WITH_YOUR_STRIPE_SECRET_KEY
+  webhook-secret: whsec_REPLACE_WITH_YOUR_STRIPE_WEBHOOK_SECRET
+  success-url: http://localhost:3000/payment/success
+  cancel-url: http://localhost:3000/payment/cancel
+
 #springdoc:
 #  api-docs:
 #    enabled: true
