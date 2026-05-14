@@ -80,7 +80,7 @@ public class DepartureServiceImpl implements DepartureService {
     }
 
     @Override
-    @CacheEvict(value = "departures", allEntries = true)
+    @CacheEvict(value = {"departures", "tours"}, allEntries = true)
     @Transactional
     public DepartureResponse create(DepartureRequest request) {
         Tour tour = tourRepository.findById(request.getTourId())
@@ -103,7 +103,7 @@ public class DepartureServiceImpl implements DepartureService {
     }
 
     @Override
-    @CacheEvict(value = "departures", allEntries = true)
+    @CacheEvict(value = {"departures", "tours"}, allEntries = true)
     @Transactional
     public DepartureResponse update(Long id, DepartureRequest request) {
         Departure d = departureRepository.findById(id)
@@ -123,7 +123,7 @@ public class DepartureServiceImpl implements DepartureService {
     }
 
     @Override
-    @CacheEvict(value = "departures", allEntries = true)
+    @CacheEvict(value = {"departures", "tours"}, allEntries = true)
     @Transactional
     public void delete(Long id) {
         Departure d = departureRepository.findById(id)
@@ -137,7 +137,7 @@ public class DepartureServiceImpl implements DepartureService {
     }
 
     @Override
-    @CacheEvict(value = "departures", allEntries = true)
+    @CacheEvict(value = {"departures", "tours"}, allEntries = true)
     @Transactional
     public DepartureResponse updateStatus(Long id, String status) {
         Departure d = departureRepository.findById(id)
