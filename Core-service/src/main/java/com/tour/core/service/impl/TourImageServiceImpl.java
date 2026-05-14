@@ -8,6 +8,7 @@ import com.tour.core.exception.InvalidDataException;
 import com.tour.core.exception.ResourceNotFoundException;
 import com.tour.core.repository.TourImageRepository;
 import com.tour.core.repository.TourRepository;
+import com.tour.core.service.S3StorageService;
 import com.tour.core.service.TourImageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +30,7 @@ public class TourImageServiceImpl implements TourImageService {
     private final TourImageRepository tourImageRepository;
     private final TourRepository tourRepository;
     private final ModelMapper modelMapper;
+    private final S3StorageService s3StorageService;
 
     @Override
     @Cacheable(value = "tourImages", key = "#tourId")
@@ -37,7 +39,6 @@ public class TourImageServiceImpl implements TourImageService {
         if (!tourRepository.existsById(tourId)) {
             throw new ResourceNotFoundException("Tour không tồn tại: " + tourId);
         }
-
         return tourImageRepository.findByTourIdOrderBySortOrderAsc(tourId)
                 .stream()
                 .map(image -> modelMapper.map(image, TourImageResponse.class))
@@ -55,7 +56,6 @@ public class TourImageServiceImpl implements TourImageService {
             List<TourImage> existingImages = tourImageRepository.findByTourIdOrderBySortOrderAsc(tourId);
             existingImages.forEach(image -> image.setIsCover(false));
             tourImageRepository.saveAll(existingImages);
-            log.info("Reset isCover=false cho {} ảnh cũ của tour {}", existingImages.size(), tourId);
         }
 
         int nextOrder = tourImageRepository.findByTourIdOrderBySortOrderAsc(tourId).size() + 1;
@@ -67,9 +67,9 @@ public class TourImageServiceImpl implements TourImageService {
                 .sortOrder(request.getSortOrder() != null ? request.getSortOrder() : nextOrder)
                 .build();
 
-        TourImage savedImage = tourImageRepository.save(image);
-        log.info("Thêm ảnh id={} cho tour id={}, isCover={}", savedImage.getId(), tourId, savedImage.getIsCover());
-        return modelMapper.map(savedImage, TourImageResponse.class);
+        TourImage saved = tourImageRepository.save(image);
+        log.info("Thêm ảnh id={} cho tour id={}, isCover={}", saved.getId(), tourId, saved.getIsCover());
+        return modelMapper.map(saved, TourImageResponse.class);
     }
 
     @Override
@@ -83,8 +83,19 @@ public class TourImageServiceImpl implements TourImageService {
             throw new InvalidDataException("Ảnh id=" + imageId + " không thuộc tour id=" + tourId);
         }
 
+        String imageUrl = image.getImageUrl();
         tourImageRepository.delete(image);
         log.info("Xóa ảnh id={} khỏi tour id={}", imageId, tourId);
+
+        // Xóa file khỏi S3 sau khi xóa DB thành công
+        try {
+            if (imageUrl != null && !imageUrl.isBlank()) {
+                s3StorageService.deleteByUrl(imageUrl);
+                log.info("Đã xóa file S3: {}", imageUrl);
+            }
+        } catch (Exception e) {
+            log.warn("Không thể xóa file S3 cho ảnh id={}: {}", imageId, e.getMessage());
+        }
     }
 
     @Override
@@ -93,21 +104,20 @@ public class TourImageServiceImpl implements TourImageService {
     public TourImageResponse setCover(Long tourId, Long imageId) {
         List<TourImage> allImages = tourImageRepository.findByTourIdOrderBySortOrderAsc(tourId);
 
-        boolean exists = allImages.stream().anyMatch(image -> image.getId().equals(imageId));
+        boolean exists = allImages.stream().anyMatch(img -> img.getId().equals(imageId));
         if (!exists) {
             throw new ResourceNotFoundException("Ảnh id=" + imageId + " không tồn tại trong tour id=" + tourId);
         }
 
-        allImages.forEach(image -> image.setIsCover(image.getId().equals(imageId)));
+        allImages.forEach(img -> img.setIsCover(img.getId().equals(imageId)));
         tourImageRepository.saveAll(allImages);
 
-        TourImage coverImage = allImages.stream()
-                .filter(image -> image.getId().equals(imageId))
-                .findFirst()
-                .get();
+        TourImage cover = allImages.stream()
+                .filter(img -> img.getId().equals(imageId))
+                .findFirst().orElseThrow();
 
         log.info("Đặt ảnh id={} làm bìa cho tour id={}", imageId, tourId);
-        return modelMapper.map(coverImage, TourImageResponse.class);
+        return modelMapper.map(cover, TourImageResponse.class);
     }
 
     @Override
@@ -120,19 +130,17 @@ public class TourImageServiceImpl implements TourImageService {
 
         List<TourImage> allImages = tourImageRepository.findByTourIdOrderBySortOrderAsc(tourId);
         Map<Long, TourImage> imageMap = allImages.stream()
-                .collect(Collectors.toMap(TourImage::getId, image -> image));
+                .collect(Collectors.toMap(TourImage::getId, img -> img));
 
-        for (Long id : imageIds) {
-            if (!imageMap.containsKey(id)) {
-                throw new InvalidDataException("Ảnh id=" + id + " không thuộc tour id=" + tourId);
+        for (Long iid : imageIds) {
+            if (!imageMap.containsKey(iid)) {
+                throw new InvalidDataException("Ảnh id=" + iid + " không thuộc tour id=" + tourId);
             }
         }
 
         for (int i = 0; i < imageIds.size(); i++) {
-            TourImage image = imageMap.get(imageIds.get(i));
-            if (image != null) {
-                image.setSortOrder(i + 1);
-            }
+            TourImage img = imageMap.get(imageIds.get(i));
+            if (img != null) img.setSortOrder(i + 1);
         }
 
         tourImageRepository.saveAll(allImages);
