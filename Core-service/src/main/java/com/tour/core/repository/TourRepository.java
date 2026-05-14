@@ -41,9 +41,9 @@ public interface TourRepository extends JpaRepository<Tour, Long> {
               AND (:isHot IS NULL OR t.isHot = :isHot)
               AND (:destinationId IS NULL OR d.id = :destinationId)
               AND (:keyword IS NULL OR :keyword = ''
-                   OR LOWER(t.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                   OR LOWER(t.slug) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                   OR LOWER(t.description) LIKE LOWER(CONCAT('%', :keyword, '%')))
+                   OR LOWER(unaccent(t.title)) LIKE LOWER(unaccent(CONCAT('%', :keyword, '%')))
+                   OR LOWER(unaccent(t.slug)) LIKE LOWER(unaccent(CONCAT('%', :keyword, '%')))
+                   OR LOWER(unaccent(t.description)) LIKE LOWER(unaccent(CONCAT('%', :keyword, '%'))))
             ORDER BY t.id DESC
             """)
     Page<Tour> searchForAdmin(
