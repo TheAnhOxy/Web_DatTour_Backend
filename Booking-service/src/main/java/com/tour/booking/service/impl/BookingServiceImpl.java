@@ -46,35 +46,34 @@ public class BookingServiceImpl implements BookingService {
         RLock lock = redissonClient.getLock(lockKey);
 
         try {
-            //  Giữ Distributed Lock để chống Overbooking tuyệt đối
             boolean isLocked = lock.tryLock(3, 10, TimeUnit.SECONDS);
             if (!isLocked) {
-                throw new BusinessException("Hệ thống đang bận xử lý lượt đặt chỗ này, vui lòng thử lại sau!");
+                throw new BusinessException("Hệ hệ thống đang bận xử lý, vui lòng thử lại sau!");
             }
 
-            //  Lấy dữ liệu từ Core Service
+            // 1. Gọi Core Service lấy dữ liệu DTO mới
             ApiResponse coreResponse = coreClient.getDepartureDetails(request.getDepartureId());
             if (coreResponse == null || coreResponse.getStatus() != 200 || coreResponse.getData() == null) {
                 throw new BusinessException("Không tìm thấy thông tin lịch khởi hành!");
             }
-            Map<String, Object> departureData = (Map<String, Object>) coreResponse.getData();
-            Map<String, Object> priceConfig = (Map<String, Object>) departureData.get("priceConfig");
 
-            // Check Slot (Redis First)
+            // 2. Bóc tách Map (Jackson tự động map từ DepartureResponseBookingDTO sang Map này)
+            Map<String, Object> departureData = (Map<String, Object>) coreResponse.getData();
+
+            // Bóc tách các Object con đã được định nghĩa trong DTO mới của Core
+            Map<String, Object> destData = (Map<String, Object>) departureData.get("destination");
+            Map<String, Object> priceConfig = (Map<String, Object>) departureData.get("priceConfig");
+            String tourTitle = departureData.get("tourTitle") != null ? departureData.get("tourTitle").toString() : "N/A";
+
+            // 3. Kiểm tra Slot (Redis)
             String slotKey = "SLOTS_" + request.getDepartureId();
             RBucket<Object> bucket = redissonClient.getBucket(slotKey);
             Object bucketValue = bucket.get();
-
             Integer availableSlots;
 
             if (bucketValue == null) {
-                log.info("Redis chưa có slot, tiến hành sync từ Core Service");
                 int max = Integer.parseInt(departureData.get("maxSlots").toString());
-
-                int booked = departureData.get("bookedSlots") != null
-                        ? Integer.parseInt(departureData.get("bookedSlots").toString())
-                        : 0;
-
+                int booked = departureData.get("bookedSlots") != null ? Integer.parseInt(departureData.get("bookedSlots").toString()) : 0;
                 availableSlots = max - booked;
                 bucket.set(availableSlots);
             } else {
@@ -85,24 +84,33 @@ public class BookingServiceImpl implements BookingService {
                 throw new BusinessException("Xin lỗi, tour này không còn đủ chỗ trống!");
             }
 
-            //Tính tiền & Tạo Booking Entity
+            // 4. Tính tiền & Tạo Snapshot
             BigDecimal totalAmount = calculateTotal(request.getPassengers(), priceConfig);
 
             Booking booking = Booking.builder()
                     .bookingCode("BK" + System.nanoTime())
-
                     .userId(request.getUserId())
                     .departureId(request.getDepartureId())
                     .status("PENDING")
                     .totalAmount(totalAmount)
                     .priceSnapshot(Map.of(
-                            "tourTitle", departureData.get("tourTitle") != null ? departureData.get("tourTitle") : "N/A",
-                            "startDate", departureData.get("startDate") != null ? departureData.get("startDate") : "",
-                            "priceConfig", priceConfig
+                            "tourTitle", tourTitle,
+                            "startDate", departureData.get("startDate") != null ? departureData.get("startDate").toString() : "",
+                            "priceConfig", priceConfig != null ? priceConfig : Map.of(),
+
+                            // LƯU NGUYÊN OBJECT DESTINATION TỪ CORE SANG
+                            "destination", destData != null ? destData : Map.of(),
+
+                            // Để FE dùng cityName nhanh hơn
+                            "cityName", (destData != null && destData.get("cityName") != null) ? destData.get("cityName") : "N/A",
+
+                            "pickupName", departureData.get("pickupName") != null ? departureData.get("pickupName") : "N/A",
+                            "pickupAddress", departureData.get("pickupAddress") != null ? departureData.get("pickupAddress") : "N/A",
+                            "pickupTime", departureData.get("pickupTime") != null ? departureData.get("pickupTime").toString() : ""
                     ))
                     .build();
 
-            // Bước 5: Map Passengers & Update Slot
+            // 5. Lưu hành khách & Cập nhật Redis
             List<Passenger> passengers = request.getPassengers().stream()
                     .map(p -> Passenger.builder()
                             .fullName(p.getFullName()).dob(p.getDob()).gender(p.getGender())
@@ -110,22 +118,18 @@ public class BookingServiceImpl implements BookingService {
                             .build()).toList();
             booking.setPassengers(passengers);
 
-            // Cập nhật Redis ngay lập tức để giữ chỗ
             bucket.set(availableSlots - passengers.size());
 
-            //  Lưu DB & Gửi Kafka
             Booking saved = bookingRepository.save(booking);
-
             publishBookingCreatedEvent(saved);
 
-            // Trả về chi tiết (Gọi hàm buildDetailedResponse)
             return buildDetailedResponse(saved, request.getPassengers(), priceConfig);
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new BusinessException("Lỗi gián đoạn khi đang xử lý giữ chỗ!");
+            throw new BusinessException("Lỗi hệ thống khi giữ chỗ!");
         } finally {
-            if (lock.isHeldByCurrentThread()) {
+            if (lock.isHeldByCurrentThread() && lock.isLocked()) {
                 lock.unlock();
             }
         }
@@ -133,7 +137,9 @@ public class BookingServiceImpl implements BookingService {
 
     private BookingResponse buildDetailedResponse(Booking saved, List<PassengerDTO> passengerDTOs, Map<String, Object> priceConfig) {
         StringBuilder breakdown = new StringBuilder();
+        Map<String, Object> priceSnapshot = saved.getPriceSnapshot();
 
+        // Logic tính toán breakdown giữ nguyên
         long adult = passengerDTOs.stream().filter(p -> "ADULT".equals(p.getAgeGroup())).count();
         long c1014 = passengerDTOs.stream().filter(p -> "CHILD_10_14".equals(p.getAgeGroup())).count();
         long c49 = passengerDTOs.stream().filter(p -> "CHILD_4_9".equals(p.getAgeGroup())).count();
@@ -144,24 +150,44 @@ public class BookingServiceImpl implements BookingService {
         if (c49 > 0) breakdown.append(String.format("Trẻ em (4-9): %d x %s; ", c49, priceConfig.get("child49Price")));
         if (baby > 0) breakdown.append(String.format("Em bé: %d x %s; ", baby, priceConfig.get("babyPrice")));
 
+        // Xử lý an toàn chuỗi pickupTime trước khi build
+        Object rawPickupTime = priceSnapshot.get("pickupTime");
+        LocalDateTime parsedPickupTime = (rawPickupTime != null && !rawPickupTime.toString().isEmpty() && !rawPickupTime.toString().equals("null"))
+                ? LocalDateTime.parse(rawPickupTime.toString())
+                : null;
+
         return BookingResponse.builder()
                 .bookingCode(saved.getBookingCode())
                 .status(saved.getStatus())
                 .totalAmount(saved.getTotalAmount())
                 .createdAt(saved.getCreatedAt())
-                .tourTitle((String) saved.getPriceSnapshot().get("tourTitle"))
-                .startDate(String.valueOf(saved.getPriceSnapshot().get("startDate")))
+                .passengers(passengerDTOs)
+                .tourTitle((String) priceSnapshot.get("tourTitle"))
+                .startDate(String.valueOf(priceSnapshot.get("startDate")))
+                .cityName((String) priceSnapshot.get("cityName"))
+                .pickupName((String) priceSnapshot.get("pickupName"))
+                .pickupAddress((String) priceSnapshot.get("pickupAddress"))
+                .destination((Map<String, Object>) priceSnapshot.get("destination"))
+                // ĐƯA VÀO ĐÂY: Sử dụng biến đã parse ở trên
+                .pickupTime(parsedPickupTime)
                 .priceDetail(priceConfig)
-                .message("Đặt chỗ thành công! Diễn giải: " + breakdown.toString().trim())
+                .userId(saved.getUserId())
+                .message("Giữ chỗ thành công! Diễn giải: " + breakdown.toString().trim())
                 .build();
     }
 
     private BigDecimal calculateTotal(List<PassengerDTO> passengers, Map<String, Object> priceConfig) {
+        // Nếu priceConfig null, báo lỗi nghiệp vụ rõ ràng thay vì để hệ thống crash 500
+        if (priceConfig == null) {
+            throw new BusinessException("Lỗi: Tour này chưa được cấu hình bảng giá. Vui lòng liên hệ admin!");
+        }
+
         BigDecimal total = BigDecimal.ZERO;
-        BigDecimal adultP = new BigDecimal(priceConfig.get("adultPrice").toString());
-        BigDecimal c1014P = new BigDecimal(priceConfig.get("child1014Price").toString());
-        BigDecimal c49P = new BigDecimal(priceConfig.get("child49Price").toString());
-        BigDecimal babyP = new BigDecimal(priceConfig.get("babyPrice").toString());
+        // Dùng hàm helper để lấy giá an toàn, tránh lỗi null pointer
+        BigDecimal adultP = getPrice(priceConfig, "adultPrice");
+        BigDecimal c1014P = getPrice(priceConfig, "child1014Price");
+        BigDecimal c49P = getPrice(priceConfig, "child49Price");
+        BigDecimal babyP = getPrice(priceConfig, "babyPrice");
 
         for (PassengerDTO p : passengers) {
             switch (p.getAgeGroup()) {
@@ -172,6 +198,12 @@ public class BookingServiceImpl implements BookingService {
             }
         }
         return total;
+    }
+
+    // Hàm bổ trợ lấy giá an toàn
+    private BigDecimal getPrice(Map<String, Object> priceConfig, String key) {
+        Object value = priceConfig.get(key);
+        return value != null ? new BigDecimal(value.toString()) : BigDecimal.ZERO;
     }
 
     private void publishBookingCreatedEvent(Booking booking) {
@@ -281,12 +313,17 @@ public class BookingServiceImpl implements BookingService {
         return BookingResponse.builder()
                 .bookingCode(booking.getBookingCode())
                 .status(booking.getStatus())
-
                 .totalAmount(booking.getTotalAmount())
                 .createdAt(booking.getCreatedAt())
-                .passengers(passengerDTOs) // Đã có tên hành khách
+                .passengers(passengerDTOs)
+
+                // Lấy từ Snapshot (Dữ liệu quá khứ)
                 .tourTitle(priceSnapshot != null ? (String) priceSnapshot.get("tourTitle") : "N/A")
                 .startDate(priceSnapshot != null ? String.valueOf(priceSnapshot.get("startDate")) : "")
+                .cityName(priceSnapshot != null ? (String) priceSnapshot.get("cityName") : "")
+                .pickupName(priceSnapshot != null ? (String) priceSnapshot.get("pickupName") : "")
+                .pickupAddress(priceSnapshot != null ? (String) priceSnapshot.get("pickupAddress") : "")
+
                 .priceDetail(priceSnapshot != null ? (Map<String, Object>) priceSnapshot.get("priceConfig") : null)
                 .userId(booking.getUserId())
                 .build();

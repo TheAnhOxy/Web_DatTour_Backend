@@ -24,6 +24,13 @@ public class BookingResponse {
     private String message;
     private String tourTitle;
     private String startDate;
+
+    private String cityName;
+    private String pickupName;
+    private String pickupAddress;
+    private LocalDateTime pickupTime;
+
     private Map<String, Object> priceDetail;
     private List<PassengerDTO> passengers;
+    private Map<String, Object> destination;
 }
