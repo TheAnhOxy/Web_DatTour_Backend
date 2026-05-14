@@ -33,19 +33,32 @@ public interface TourRepository extends JpaRepository<Tour, Long> {
             Pageable pageable
     );
 
-    @Query("""
-            SELECT DISTINCT t FROM Tour t
-            LEFT JOIN t.destinations d
+    @Query(value = """
+            SELECT DISTINCT t.* FROM tours t
+            LEFT JOIN tour_destinations td ON t.id = td.tour_id
             WHERE (:status IS NULL OR t.status = :status)
-              AND (:categoryId IS NULL OR t.category.id = :categoryId)
-              AND (:isHot IS NULL OR t.isHot = :isHot)
-              AND (:destinationId IS NULL OR d.id = :destinationId)
+              AND (:categoryId IS NULL OR t.category_id = :categoryId)
+              AND (:isHot IS NULL OR t.is_hot = :isHot)
+              AND (:destinationId IS NULL OR td.destination_id = :destinationId)
               AND (:keyword IS NULL OR :keyword = ''
                    OR LOWER(unaccent(t.title)) LIKE LOWER(unaccent(CONCAT('%', :keyword, '%')))
                    OR LOWER(unaccent(t.slug)) LIKE LOWER(unaccent(CONCAT('%', :keyword, '%')))
                    OR LOWER(unaccent(t.description)) LIKE LOWER(unaccent(CONCAT('%', :keyword, '%'))))
             ORDER BY t.id DESC
-            """)
+            """,
+            countQuery = """
+            SELECT COUNT(DISTINCT t.id) FROM tours t
+            LEFT JOIN tour_destinations td ON t.id = td.tour_id
+            WHERE (:status IS NULL OR t.status = :status)
+              AND (:categoryId IS NULL OR t.category_id = :categoryId)
+              AND (:isHot IS NULL OR t.is_hot = :isHot)
+              AND (:destinationId IS NULL OR td.destination_id = :destinationId)
+              AND (:keyword IS NULL OR :keyword = ''
+                   OR LOWER(unaccent(t.title)) LIKE LOWER(unaccent(CONCAT('%', :keyword, '%')))
+                   OR LOWER(unaccent(t.slug)) LIKE LOWER(unaccent(CONCAT('%', :keyword, '%')))
+                   OR LOWER(unaccent(t.description)) LIKE LOWER(unaccent(CONCAT('%', :keyword, '%'))))
+            """,
+            nativeQuery = true)
     Page<Tour> searchForAdmin(
             @Param("keyword") String keyword,
             @Param("status") String status,
