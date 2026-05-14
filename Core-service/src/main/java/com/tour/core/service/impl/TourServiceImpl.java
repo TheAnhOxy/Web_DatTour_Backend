@@ -1,6 +1,5 @@
 package com.tour.core.service.impl;
 
-import com.tour.core.dto.request.TourImageRequest;
 import com.tour.core.dto.request.TourRequest;
 import com.tour.core.dto.request.DepartureRequest;
 import com.tour.core.dto.response.DestinationResponse;
@@ -25,11 +24,11 @@ import com.tour.core.repository.TourRepository;
 import com.tour.core.repository.DepartureRepository;
 import com.tour.core.repository.TransportationRepository;
 import com.tour.core.service.TourService;
+import com.tour.core.service.S3StorageService;
 import com.tour.core.util.SlugUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
-import org.redisson.api.RBucket;
 import org.redisson.api.RedissonClient;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -41,6 +40,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -62,14 +62,17 @@ public class TourServiceImpl implements TourService {
     private final ModelMapper modelMapper;
     private final RedissonClient redissonClient;
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final S3StorageService s3StorageService;
+
+    // ── Queries ──
 
     @Override
     @Cacheable(value = "tours", key = "'customer:' + (#categoryId == null ? 'ALL' : #categoryId) + ':' + (#isHot == null ? 'ALL' : #isHot) + ':' + (#destinationId == null ? 'ALL' : #destinationId) + ':' + #page + ':' + #size")
     @Transactional(readOnly = true)
     public Page<TourListResponse> getAllForCustomer(Long categoryId, Boolean isHot, Long destinationId, int page, int size) {
         Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size));
-        Page<Tour> tours = tourRepository.findByFilters("ACTIVE", categoryId, isHot, destinationId, pageable);
-        return tours.map(this::toListResponse);
+        return tourRepository.findByFilters("ACTIVE", categoryId, isHot, destinationId, pageable)
+                .map(this::toListResponse);
     }
 
     @Override
@@ -77,16 +80,23 @@ public class TourServiceImpl implements TourService {
     @Transactional(readOnly = true)
     public Page<TourListResponse> getAllForAdmin(String status, Long categoryId, Boolean isHot, Long destinationId, int page, int size) {
         Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size));
-        Page<Tour> tours = tourRepository.findByFilters(status, categoryId, isHot, destinationId, pageable);
-        return tours.map(this::toListResponse);
+        return tourRepository.findByFilters(status, categoryId, isHot, destinationId, pageable)
+                .map(this::toListResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<TourListResponse> searchForAdmin(String keyword, String status, Long categoryId, Boolean isHot, Long destinationId, int page, int size) {
+        Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size));
+        return tourRepository.searchForAdmin(keyword, status, categoryId, isHot, destinationId, pageable)
+                .map(this::toListResponse);
     }
 
     @Override
     @Cacheable(value = "tours", key = "#id")
     @Transactional(readOnly = true)
     public TourDetailResponse getById(Long id) {
-        Tour tour = findTourById(id);
-        return toDetailResponse(tour);
+        return toDetailResponse(findTourById(id));
     }
 
     @Override
@@ -98,53 +108,22 @@ public class TourServiceImpl implements TourService {
         return toDetailResponse(tour);
     }
 
+    // ── Commands ──
+
     @Override
     @CacheEvict(value = "tours", allEntries = true)
     @Transactional
-    public TourDetailResponse create(TourRequest request) {
-        String slug = buildUniqueSlug(request.getTitle());
-
-        TourCategory category = tourCategoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new ResourceNotFoundException("Danh mục không tồn tại: " + request.getCategoryId()));
-
-        Transportation transportation = transportationRepository.findById(request.getTransportationId())
-                .orElseThrow(() -> new ResourceNotFoundException("Phương tiện không tồn tại: " + request.getTransportationId()));
-
-        Set<Destination> destinations = resolveDestinations(request.getDestinationIds());
-
-        Tour tour = modelMapper.map(request, Tour.class);
-        tour.setImages(null);
-        tour.setSlug(slug);
-        tour.setCategory(category);
-        tour.setTransportation(transportation);
-        tour.setDestinations(destinations);
-        tour.setStatus(request.getStatus() == null || request.getStatus().isBlank() ? "ACTIVE" : request.getStatus());
-        tour.setIsHot(Boolean.TRUE.equals(request.getIsHot()));
-        tour.setRating(BigDecimal.ZERO);
-        tour.setReviewCount(0);
-
-        Tour savedTour = tourRepository.save(tour);
-
-        TourSearchEvent event = TourSearchEvent.builder()
-                .tourId(savedTour.getId())
-                .title(savedTour.getTitle())
-                .destinations(savedTour.getDestinations().stream().map(Destination::getCityName).toList())
-                .departures(savedTour.getDepartures().stream()
-                        .map(d -> DepartureEvent.builder().id(d.getId()).startDate(d.getStartDate()).endDate(d.getEndDate()).build())
-                        .toList())
-                .build();
-        kafkaTemplate.send("tour-search-topic", event);
-
-        saveTourImages(savedTour, request.getImages());
-        
-        // kiểm tra nếu có departures, nếu không có thì throw lỗi vì tour phải có ít nhất 1 lịch khởi hành để khách đặt
+    public TourDetailResponse create(TourRequest request, List<MultipartFile> images) {
         if (request.getDepartures() == null || request.getDepartures().isEmpty()) {
             throw new InvalidDataException("Phải có ít nhất một lịch khởi hành");
         }
+
+        Tour savedTour = tourRepository.save(buildTourEntity(request));
+        uploadAndSaveImages(savedTour, images);
         saveDepartures(savedTour, request.getDepartures());
+        publishKafkaEvent(savedTour);
 
-        log.info("Tạo tour: id={}, slug={} bởi {}", savedTour.getId(), slug, getCurrentUser());
-
+        log.info("Tạo tour: id={}, slug={} bởi {}", savedTour.getId(), savedTour.getSlug(), getCurrentUser());
         return toDetailResponse(savedTour);
     }
 
@@ -161,7 +140,6 @@ public class TourServiceImpl implements TourService {
 
         TourCategory category = tourCategoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Danh mục không tồn tại: " + request.getCategoryId()));
-
         Transportation transportation = transportationRepository.findById(request.getTransportationId())
                 .orElseThrow(() -> new ResourceNotFoundException("Phương tiện không tồn tại: " + request.getTransportationId()));
 
@@ -174,24 +152,8 @@ public class TourServiceImpl implements TourService {
         tour.setIsHot(Boolean.TRUE.equals(request.getIsHot()));
 
         Tour savedTour = tourRepository.save(tour);
-        // BẮN KAFKA ĐỂ SEARCH SERVICE CẬP NHẬT:
-        TourSearchEvent event = TourSearchEvent.builder()
-                .tourId(savedTour.getId())
-                .title(savedTour.getTitle())
-                .destinations(savedTour.getDestinations().stream()
-                        .map(Destination::getCityName) // Lấy tên thành phố từ ID
-                        .toList())
-                .departures(savedTour.getDepartures().stream()
-                        .map(d -> DepartureEvent.builder()
-                                .id(d.getId())
-                                .startDate(d.getStartDate())
-                                .endDate(d.getEndDate())
-                                .build())
-                        .toList())
-                .build();
-        kafkaTemplate.send("tour-search-topic", event);
+        publishKafkaEvent(savedTour);
 
-        // nếu gửi danh sách departures thì phải có ít nhất một mục, nếu không gửi thì giữ nguyên lịch khởi hành cũ
         if (request.getDepartures() != null) {
             if (request.getDepartures().isEmpty()) {
                 throw new InvalidDataException("Cập nhật thất bại: nếu gửi danh sách departures thì phải có ít nhất một mục");
@@ -201,26 +163,7 @@ public class TourServiceImpl implements TourService {
         }
 
         log.info("Cập nhật tour: id={}, slug={} bởi {}", savedTour.getId(), savedTour.getSlug(), getCurrentUser());
-
         return toDetailResponse(savedTour);
-    }
-
-    private void saveDepartures(Tour tour, List<DepartureRequest> departureRequests) {
-        if (departureRequests == null || departureRequests.isEmpty()) return;
-
-        List<Departure> departures = departureRequests.stream()
-                .map(dr -> {
-                    Departure d = modelMapper.map(dr, Departure.class);
-                    d.setTour(tour);
-                    d.setBookedSlots(0);
-                    return d;
-                }).collect(Collectors.toList());
-
-        List<Departure> savedDeps = departureRepository.saveAll(departures);
-        tour.setDepartures(savedDeps);
-        savedDeps.forEach(sd -> {
-            redissonClient.getBucket("SLOTS_" + sd.getId()).set(sd.getMaxSlots());
-        });
     }
 
     @Override
@@ -244,6 +187,78 @@ public class TourServiceImpl implements TourService {
         return toDetailResponse(savedTour);
     }
 
+    // ── Private helpers ──
+
+    private Tour buildTourEntity(TourRequest request) {
+        String slug = buildUniqueSlug(request.getTitle());
+        TourCategory category = tourCategoryRepository.findById(request.getCategoryId())
+                .orElseThrow(() -> new ResourceNotFoundException("Danh mục không tồn tại: " + request.getCategoryId()));
+        Transportation transportation = transportationRepository.findById(request.getTransportationId())
+                .orElseThrow(() -> new ResourceNotFoundException("Phương tiện không tồn tại: " + request.getTransportationId()));
+        Set<Destination> destinations = resolveDestinations(request.getDestinationIds());
+
+        Tour tour = modelMapper.map(request, Tour.class);
+        tour.setImages(null);
+        tour.setSlug(slug);
+        tour.setCategory(category);
+        tour.setTransportation(transportation);
+        tour.setDestinations(destinations);
+        tour.setStatus(request.getStatus() == null || request.getStatus().isBlank() ? "ACTIVE" : request.getStatus());
+        tour.setIsHot(Boolean.TRUE.equals(request.getIsHot()));
+        tour.setRating(BigDecimal.ZERO);
+        tour.setReviewCount(0);
+        return tour;
+    }
+
+    private void uploadAndSaveImages(Tour tour, List<MultipartFile> images) {
+        if (images == null || images.isEmpty()) return;
+
+        List<String> uploadedUrls = new ArrayList<>();
+        try {
+            for (int i = 0; i < images.size(); i++) {
+                MultipartFile file = images.get(i);
+                if (file == null || file.isEmpty()) continue;
+
+                String imageUrl = s3StorageService.upload(file, "tours/" + tour.getId());
+                uploadedUrls.add(imageUrl);
+
+                tourImageRepository.save(TourImage.builder()
+                        .tour(tour).imageUrl(imageUrl).isCover(i == 0).sortOrder(i + 1).build());
+            }
+        } catch (RuntimeException ex) {
+            uploadedUrls.forEach(url -> {
+                try { s3StorageService.deleteByUrl(url); }
+                catch (RuntimeException e) { log.warn("Không thể xóa ảnh S3 khi rollback: {}", url, e); }
+            });
+            throw new InvalidDataException("Upload ảnh thất bại, tour không được tạo: " + ex.getMessage());
+        }
+    }
+
+    private void publishKafkaEvent(Tour tour) {
+        TourSearchEvent event = TourSearchEvent.builder()
+                .tourId(tour.getId()).title(tour.getTitle())
+                .destinations(tour.getDestinations().stream().map(Destination::getCityName).toList())
+                .departures(tour.getDepartures() == null ? List.of() : tour.getDepartures().stream()
+                        .map(d -> DepartureEvent.builder().id(d.getId()).startDate(d.getStartDate()).endDate(d.getEndDate()).build())
+                        .toList())
+                .build();
+        kafkaTemplate.send("tour-search-topic", event);
+    }
+
+    private void saveDepartures(Tour tour, List<DepartureRequest> departureRequests) {
+        if (departureRequests == null || departureRequests.isEmpty()) return;
+        List<Departure> departures = departureRequests.stream().map(dr -> {
+            Departure d = modelMapper.map(dr, Departure.class);
+            d.setTour(tour);
+            d.setBookedSlots(0);
+            return d;
+        }).collect(Collectors.toList());
+
+        List<Departure> savedDeps = departureRepository.saveAll(departures);
+        tour.setDepartures(savedDeps);
+        savedDeps.forEach(sd -> redissonClient.getBucket("SLOTS_" + sd.getId()).set(sd.getMaxSlots()));
+    }
+
     private Tour findTourById(Long id) {
         return tourRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Tour không tồn tại: " + id));
@@ -251,67 +266,31 @@ public class TourServiceImpl implements TourService {
 
     private String buildUniqueSlug(String title) {
         String baseSlug = SlugUtil.toSlug(title);
-        if (baseSlug.isBlank()) {
-            throw new InvalidDataException("Không thể tạo slug từ tiêu đề");
-        }
-
-        if (tourRepository.existsBySlug(baseSlug)) {
-            return baseSlug + "-" + System.currentTimeMillis();
-        }
-        return baseSlug;
+        if (baseSlug.isBlank()) throw new InvalidDataException("Không thể tạo slug từ tiêu đề");
+        return tourRepository.existsBySlug(baseSlug) ? baseSlug + "-" + System.currentTimeMillis() : baseSlug;
     }
 
     private Set<Destination> resolveDestinations(List<Long> destinationIds) {
-        if (destinationIds == null || destinationIds.isEmpty()) {
-            return Set.of();
-        }
-
+        if (destinationIds == null || destinationIds.isEmpty()) return Set.of();
         List<Destination> destinations = destinationRepository.findAllById(destinationIds);
-        if (destinations.size() != destinationIds.size()) {
-            throw new ResourceNotFoundException("Một hoặc nhiều điểm đến không tồn tại");
-        }
-
+        if (destinations.size() != destinationIds.size()) throw new ResourceNotFoundException("Một hoặc nhiều điểm đến không tồn tại");
         return destinations.stream().collect(Collectors.toSet());
     }
 
-    private void saveTourImages(Tour tour, List<TourImageRequest> imageRequests) {
-        if (imageRequests == null || imageRequests.isEmpty()) {
-            return;
-        }
-
-        List<TourImage> images = new ArrayList<>();
-        for (TourImageRequest request : imageRequests) {
-            TourImage image = TourImage.builder()
-                    .tour(tour)
-                    .imageUrl(request.getImageUrl())
-                    .isCover(Boolean.TRUE.equals(request.getIsCover()))
-                    .sortOrder(request.getSortOrder() == null ? 0 : request.getSortOrder())
-                    .build();
-            images.add(image);
-        }
-
-        tourImageRepository.saveAll(images);
-    }
+    // ── Mapping helpers ──
 
     private TourListResponse toListResponse(Tour tour) {
         Departure nextDeparture = findNextDeparture(tour);
-
-        String coverImageUrl = null;
-        if (tour.getImages() != null && !tour.getImages().isEmpty()) {
-            coverImageUrl = tour.getImages().stream()
-                    .filter(image -> Boolean.TRUE.equals(image.getIsCover()))
-                    .findFirst()
-                    .or(() -> tour.getImages().stream().findFirst())
-                    .map(TourImage::getImageUrl)
-                    .orElse(null);
-        }
-
-        log.debug("Tour ID={}, rating={}, reviewCount={}", tour.getId(), tour.getRating(), tour.getReviewCount());
+        String coverImageUrl = tour.getImages() == null || tour.getImages().isEmpty() ? null :
+                tour.getImages().stream()
+                        .filter(img -> Boolean.TRUE.equals(img.getIsCover())).findFirst()
+                        .or(() -> tour.getImages().stream().findFirst())
+                        .map(TourImage::getImageUrl).orElse(null);
 
         TourListResponse response = modelMapper.map(tour, TourListResponse.class);
         response.setCoverImageUrl(coverImageUrl);
         response.setCategoryName(tour.getCategory() != null ? tour.getCategory().getName() : null);
-        response.setRegion(tour.getDestinations() != null && !tour.getDestinations().isEmpty() 
+        response.setRegion(tour.getDestinations() != null && !tour.getDestinations().isEmpty()
                 ? tour.getDestinations().iterator().next().getRegion() : null);
         response.setDepartureId(nextDeparture != null ? nextDeparture.getId() : null);
         response.setDepartureStartDate(nextDeparture != null ? nextDeparture.getStartDate() : null);
@@ -320,48 +299,33 @@ public class TourServiceImpl implements TourService {
         response.setPickupTime(nextDeparture != null ? nextDeparture.getPickupTime() : null);
         response.setRating(tour.getRating());
         response.setReviewCount(tour.getReviewCount());
-        
-        log.debug("Response after setting: rating={}, reviewCount={}", response.getRating(), response.getReviewCount());
-
         return response;
     }
 
     private Departure findNextDeparture(Tour tour) {
-        if (tour.getDepartures() == null || tour.getDepartures().isEmpty()) {
-            return null;
-        }
-
+        if (tour.getDepartures() == null || tour.getDepartures().isEmpty()) return null;
         return tour.getDepartures().stream()
-                .filter(departure -> departure.getStartDate() != null)
-                .min((left, right) -> left.getStartDate().compareTo(right.getStartDate()))
+                .filter(d -> d.getStartDate() != null)
+                .min((a, b) -> a.getStartDate().compareTo(b.getStartDate()))
                 .orElse(tour.getDepartures().get(0));
     }
 
     private TourDetailResponse toDetailResponse(Tour tour) {
         List<TourImageResponse> imageResponses = tourImageRepository.findByTourIdOrderBySortOrderAsc(tour.getId())
-                .stream()
-                .map(image -> modelMapper.map(image, TourImageResponse.class))
-                .toList();
-
-        List<DestinationResponse> destinationResponses = tour.getDestinations() == null ? List.of() :
-                tour.getDestinations().stream()
-                        .map(destination -> modelMapper.map(destination, DestinationResponse.class))
-                        .toList();
-
-        List<DepartureResponse> departureResponses = tour.getDepartures() == null ? List.of() :
-                tour.getDepartures().stream()
-                        .map(departure -> modelMapper.map(departure, DepartureResponse.class))
-                        .toList();
+                .stream().map(img -> modelMapper.map(img, TourImageResponse.class)).toList();
+        List<DestinationResponse> destResponses = tour.getDestinations() == null ? List.of() :
+                tour.getDestinations().stream().map(d -> modelMapper.map(d, DestinationResponse.class)).toList();
+        List<DepartureResponse> depResponses = tour.getDepartures() == null ? List.of() :
+                tour.getDepartures().stream().map(d -> modelMapper.map(d, DepartureResponse.class)).toList();
 
         TourDetailResponse response = modelMapper.map(tour, TourDetailResponse.class);
         response.setImages(imageResponses);
-        response.setDestinations(destinationResponses);
-        response.setDepartures(departureResponses);
+        response.setDestinations(destResponses);
+        response.setDepartures(depResponses);
         response.setCategoryId(tour.getCategory() != null ? tour.getCategory().getId() : null);
         response.setCategoryName(tour.getCategory() != null ? tour.getCategory().getName() : null);
         response.setTransportationId(tour.getTransportation() != null ? tour.getTransportation().getId() : null);
         response.setTransportationType(tour.getTransportation() != null ? tour.getTransportation().getType() : null);
-
         return response;
     }
 
