@@ -1,15 +1,18 @@
 package com.tour.booking.entity;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import org.redisson.api.JsonType;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+
 
 @Entity
 @Table(name = "bookings")
@@ -55,4 +58,6 @@ public class Booking {
 
     @CreationTimestamp
     private LocalDateTime createdAt;
+
+
 }

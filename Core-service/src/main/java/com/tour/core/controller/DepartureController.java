@@ -1,5 +1,6 @@
 package com.tour.core.controller;
 
+import com.tour.core.dto.DepartureResponseBookingDTO;
 import com.tour.core.dto.request.DepartureRequest;
 import com.tour.core.dto.response.ApiResponse;
 import com.tour.core.dto.response.DepartureResponse;
@@ -36,6 +37,17 @@ public class DepartureController {
                 .status(200)
                 .message("Lấy danh sách lịch khởi hành thành công")
                 .data(deps)
+                .build());
+    }
+
+    @GetMapping("/details/{id}")
+    public ResponseEntity<ApiResponse> getDepartureDetails(@PathVariable Long id) {
+        DepartureResponseBookingDTO data = departureService.getDepartureDetails(id);
+
+        return ResponseEntity.ok(ApiResponse.builder()
+                .status(200)
+                .message("Lấy thông tin khởi hành thành công")
+                .data(data)
                 .build());
     }
 

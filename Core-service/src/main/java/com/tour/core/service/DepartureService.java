@@ -1,5 +1,6 @@
 package com.tour.core.service;
 
+import com.tour.core.dto.DepartureResponseBookingDTO;
 import com.tour.core.dto.request.DepartureRequest;
 import com.tour.core.dto.response.DepartureResponse;
 import org.springframework.data.domain.Page;
@@ -15,7 +16,7 @@ public interface DepartureService {
     Page<DepartureResponse> getByTourId(Long tourId, String status, int page, int size);
 
     DepartureResponse getById(Long id);
-
+    DepartureResponseBookingDTO getDepartureDetails(Long id);
     DepartureResponse create(DepartureRequest request);
 
     DepartureResponse update(Long id, DepartureRequest request);

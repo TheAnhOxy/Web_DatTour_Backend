@@ -1,13 +1,19 @@
 package com.tour.core.service.impl;
 
+import com.tour.core.dto.DepartureResponseBookingDTO;
+import com.tour.core.dto.DestinationBookingDTO;
+import com.tour.core.dto.PriceConfigBookingDto;
 import com.tour.core.dto.request.DepartureRequest;
 import com.tour.core.dto.response.DepartureResponse;
 import com.tour.core.dto.response.PriceConfigResponse;
 import com.tour.core.entity.Departure;
+import com.tour.core.entity.Destination;
+import com.tour.core.entity.PriceConfig;
 import com.tour.core.entity.Tour;
 import com.tour.core.exception.InvalidDataException;
 import com.tour.core.exception.ResourceNotFoundException;
 import com.tour.core.repository.DepartureRepository;
+import com.tour.core.repository.PriceConfigRepository;
 import com.tour.core.repository.TourRepository;
 import com.tour.core.service.DepartureService;
 import com.tour.core.service.PriceConfigService;
@@ -35,6 +41,7 @@ public class DepartureServiceImpl implements DepartureService {
     private static final String DEFAULT_STATUS = "OPEN";
 
     private final DepartureRepository departureRepository;
+    private final PriceConfigRepository priceConfigRepository;
     private final TourRepository tourRepository;
     private final ModelMapper modelMapper;
     private final PriceConfigService priceConfigService;
@@ -251,5 +258,66 @@ public class DepartureServiceImpl implements DepartureService {
         
         resp.setPriceConfig(pc);
         return resp;
+    }
+
+    @Override
+    public DepartureResponseBookingDTO getDepartureDetails(Long id) {
+        Departure departure = departureRepository.findByIdWithFullDetails(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy lịch khởi hành ID: " + id));
+
+        Tour tour = departure.getTour();
+
+        // Xử lý lấy Destination đại diện (vì là @ManyToMany)
+        Destination mainDestination = null;
+        if (tour.getDestinations() != null && !tour.getDestinations().isEmpty()) {
+            mainDestination = tour.getDestinations().iterator().next();
+        }
+        PriceConfig pc = departure.getPriceConfig();
+
+        // NẾU pc VẪN NULL: Có thể do Hibernate Cache hoặc Mapping 2 chiều gặp lỗi.
+        // Thử truy vấn ngược lại từ PriceConfigRepository
+        if (pc == null) {
+            log.warn("PriceConfig fetch thất bại, thử tìm trực tiếp bằng Repo");
+            pc = priceConfigRepository.findByDepartureId(id).orElse(null);
+        }
+
+        log.info("DEBUG - PriceConfig Entity: {}", pc);
+        return DepartureResponseBookingDTO.builder()
+                .id(departure.getId())
+                .startDate(departure.getStartDate())
+                .endDate(departure.getEndDate())
+                .maxSlots(departure.getMaxSlots())
+                .bookedSlots(departure.getBookedSlots())
+
+                .tourId(tour.getId())
+                .tourTitle(tour.getTitle())
+
+                // Map thông tin Destination đại diện
+                .destination(mainDestination != null ? DestinationBookingDTO.builder()
+                        .id(mainDestination.getId())
+                        .cityName(mainDestination.getCityName())
+                        .region(mainDestination.getRegion())
+                        .country(mainDestination.getCountry())
+                        .imageUrl(mainDestination.getImageUrl())
+                        .build() : null)
+
+                .pickupName(departure.getPickupName())
+                .pickupAddress(departure.getPickupAddress())
+                .pickupTime(departure.getPickupTime())
+
+                .priceConfig(mapToPriceConfigDto(departure.getPriceConfig()))
+                .build();
+    }
+
+    private PriceConfigBookingDto mapToPriceConfigDto(PriceConfig entity) {
+        if (entity == null) return null;
+        return PriceConfigBookingDto.builder()
+                .id(entity.getId())
+                .departureId(entity.getDeparture() != null ? entity.getDeparture().getId() : null)
+                .adultPrice(entity.getAdultPrice())
+                .child1014Price(entity.getChild1014Price())
+                .child49Price(entity.getChild49Price())
+                .babyPrice(entity.getBabyPrice())
+                .build();
     }
 }

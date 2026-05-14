@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface DepartureRepository extends JpaRepository<Departure, Long> {
     List<Departure> findByTourId(Long tourId);
@@ -38,4 +39,11 @@ public interface DepartureRepository extends JpaRepository<Departure, Long> {
         ORDER BY d.startDate ASC
         """)
     List<Departure> findNearlyFullDepartures();
+
+    @Query("SELECT d FROM Departure d " +
+            "JOIN FETCH d.tour t " +
+            "LEFT JOIN FETCH t.destinations dest " +
+            "LEFT JOIN FETCH d.priceConfig pc " + // Fetch luôn cả giá cho chắc
+            "WHERE d.id = :id")
+    Optional<Departure> findByIdWithFullDetails(@Param("id") Long id);
 }

@@ -41,4 +41,7 @@ public class Departure {
 
     private String status;
 
+    @OneToOne(mappedBy = "departure", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private PriceConfig priceConfig;
+
 }
