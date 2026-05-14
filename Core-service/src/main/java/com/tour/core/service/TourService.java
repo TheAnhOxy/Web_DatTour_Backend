@@ -4,6 +4,9 @@ import com.tour.core.dto.request.TourRequest;
 import com.tour.core.dto.response.TourDetailResponse;
 import com.tour.core.dto.response.TourListResponse;
 import org.springframework.data.domain.Page;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 public interface TourService {
 
@@ -11,11 +14,13 @@ public interface TourService {
 
     Page<TourListResponse> getAllForAdmin(String status, Long categoryId, Boolean isHot, Long destinationId, int page, int size);
 
+    Page<TourListResponse> searchForAdmin(String keyword, String status, Long categoryId, Boolean isHot, Long destinationId, int page, int size);
+
     TourDetailResponse getById(Long id);
 
     TourDetailResponse getBySlug(String slug);
 
-    TourDetailResponse create(TourRequest request);
+    TourDetailResponse create(TourRequest request, List<MultipartFile> images);
 
     TourDetailResponse update(Long id, TourRequest request);
 
@@ -23,3 +28,4 @@ public interface TourService {
 
     TourDetailResponse toggleHot(Long id);
 }
+

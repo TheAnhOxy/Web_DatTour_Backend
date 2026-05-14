@@ -1,5 +1,7 @@
 package com.tour.core.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,5 +22,7 @@ public class DestinationRequest {
     @NotBlank(message = "Tên quốc gia không được trống")
     private String country;
 
+    @JsonProperty("image_url")
+    @JsonAlias("imageUrl")
     private String imageUrl;
 }

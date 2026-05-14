@@ -46,4 +46,8 @@ public class TourListResponse implements Serializable {
     private String pickupAddress;
 
     private LocalDateTime pickupTime;
+
+    private BigDecimal rating;
+
+    private Integer reviewCount;
 }
