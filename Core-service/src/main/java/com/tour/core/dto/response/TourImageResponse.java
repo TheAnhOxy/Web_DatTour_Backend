@@ -19,6 +19,8 @@ public class TourImageResponse implements Serializable {
 
     private String imageUrl;
 
+    private String altText;
+
     private Boolean isCover;
 
     private Integer sortOrder;
