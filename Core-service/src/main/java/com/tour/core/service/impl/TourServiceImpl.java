@@ -7,6 +7,7 @@ import com.tour.core.dto.response.DepartureResponse;
 import com.tour.core.dto.response.TourDetailResponse;
 import com.tour.core.dto.response.TourListResponse;
 import com.tour.core.dto.response.TourImageResponse;
+import com.tour.core.service.PriceConfigService;
 import com.tour.core.entity.Destination;
 import com.tour.core.entity.Tour;
 import com.tour.core.entity.TourCategory;
@@ -63,6 +64,7 @@ public class TourServiceImpl implements TourService {
     private final RedissonClient redissonClient;
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final S3StorageService s3StorageService;
+    private final PriceConfigService priceConfigService;
 
     // ── Queries ──
 
@@ -247,16 +249,27 @@ public class TourServiceImpl implements TourService {
 
     private void saveDepartures(Tour tour, List<DepartureRequest> departureRequests) {
         if (departureRequests == null || departureRequests.isEmpty()) return;
-        List<Departure> departures = departureRequests.stream().map(dr -> {
+
+        for (DepartureRequest dr : departureRequests) {
             Departure d = modelMapper.map(dr, Departure.class);
             d.setTour(tour);
             d.setBookedSlots(0);
-            return d;
-        }).collect(Collectors.toList());
+            Departure saved = departureRepository.save(d);
+            redissonClient.getBucket("SLOTS_" + saved.getId()).set(saved.getMaxSlots());
 
-        List<Departure> savedDeps = departureRepository.saveAll(departures);
-        tour.setDepartures(savedDeps);
-        savedDeps.forEach(sd -> redissonClient.getBucket("SLOTS_" + sd.getId()).set(sd.getMaxSlots()));
+            // Lưu priceConfig nếu có trong request
+            if (dr.getPriceConfig() != null) {
+                try {
+                    priceConfigService.upsert(saved.getId(), dr.getPriceConfig());
+                    log.info("Lưu priceConfig cho departure id={}", saved.getId());
+                } catch (Exception e) {
+                    log.warn("Không thể lưu priceConfig cho departure id={}: {}", saved.getId(), e.getMessage());
+                }
+            }
+        }
+
+        // Reload departures vào tour entity
+        tour.setDepartures(departureRepository.findByTourId(tour.getId()));
     }
 
     private Tour findTourById(Long id) {
