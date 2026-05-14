@@ -32,12 +32,13 @@ public class TourController {
     @GetMapping
     @Operation(summary = "Get active tours for customer")
     public ResponseEntity<ApiResponse> getAllForCustomer(
+            @RequestParam(value = "keyword", required = false) String keyword,
             @RequestParam(value = "categoryId", required = false) Long categoryId,
             @RequestParam(value = "isHot", required = false) Boolean isHot,
             @RequestParam(value = "destinationId", required = false) Long destinationId,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "10") int size) {
-        Page<TourListResponse> tours = tourService.getAllForCustomer(categoryId, isHot, destinationId, page, size);
+        Page<TourListResponse> tours = tourService.getAllForCustomer(keyword, categoryId, isHot, destinationId, page, size);
         return ResponseEntity.ok(ApiResponse.builder()
                 .status(200)
                 .message("Lấy danh sách tour hoạt động thành công")

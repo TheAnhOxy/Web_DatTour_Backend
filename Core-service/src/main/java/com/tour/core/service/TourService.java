@@ -10,7 +10,7 @@ import java.util.List;
 
 public interface TourService {
 
-    Page<TourListResponse> getAllForCustomer(Long categoryId, Boolean isHot, Long destinationId, int page, int size);
+    Page<TourListResponse> getAllForCustomer(String keyword, Long categoryId, Boolean isHot, Long destinationId, int page, int size);
 
     Page<TourListResponse> getAllForAdmin(String status, Long categoryId, Boolean isHot, Long destinationId, int page, int size);
 
