@@ -1,74 +1,59 @@
-# This service will handle vector embeddings and MongoDB Atlas Vector Search
-import google.generativeai as genai
+from google import genai
 from app.core.config import settings
+from app.models.chat import ExtractedEntities
+import httpx
 
 class RagService:
     def __init__(self):
-        # Configure genai for embeddings if needed
-        pass
+        if settings.GEMINI_API_KEY:
+            self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        else:
+            self.client = None
+        # URL của Search-service (Java Spring Boot)
+        self.search_service_url = "http://localhost:8083/search/tours"
 
-    def _build_text_for_record(self, record_type: str, record_data: dict) -> str:
-        if record_type == "tour_package":
-            return (
-                f"Thông tin Tour Du Lịch:\n"
-                f"  Tên Tour: {record_data.get('name')}\n"
-                f"  Địa điểm đến: {record_data.get('destination')}\n"
-                f"  Giá: {record_data.get('price')} VNĐ\n"
-                f"  Thời gian: {record_data.get('duration_days')} ngày {record_data.get('duration_nights')} đêm\n"
-                f"  Lịch trình tóm tắt: {record_data.get('itinerary_summary')}\n"
-                f"  Đánh giá: {record_data.get('rating')}/5 sao\n"
-                f"  Phong cách: {record_data.get('travel_style')} (Ví dụ: Nghỉ dưỡng, Khám phá...)"
-            )
-        elif record_type == "location_info":
-            return (
-                f"Thông tin Địa điểm:\n"
-                f"  Tên địa điểm: {record_data.get('location_name')}\n"
-                f"  Mô tả: {record_data.get('description')}\n"
-                f"  Khí hậu/Thời tiết hiện tại: {record_data.get('weather')}"
-            )
-        return ""
+    def _build_text_for_record(self, record_data: dict) -> str:
+        # Hàm format kết quả JSON từ Java trả về thành dạng Text để nhét vào Prompt
+        return (
+            f"Thông tin Tour:\n"
+            f"  ID: {record_data.get('id')}\n"
+            f"  Tên Tour: {record_data.get('title')}\n"
+            f"  Các điểm đến: {', '.join(record_data.get('destinations', []))}\n"
+        )
 
-    async def get_embedding(self, text: str) -> list[float]:
+    async def search_tours_via_adapter(self, entities: ExtractedEntities) -> str:
         """
-        Calls Google's embedding model to get vector for text
+        Gọi API sang Search Service (Java) dựa trên Entities đã trích xuất.
+        Thay vì tự query Elasticsearch, AI Service giao việc này cho Backend Adapter.
         """
+        params = {}
+        if entities.destination:
+            params['destination'] = entities.destination
+            
+        print(f"Calling Search-service with params: {params}")
+        
         try:
-            result = genai.embed_content(
-                model="models/text-embedding-004",
-                content=text,
-                task_type="retrieval_query",
-            )
-            return result['embedding']
+            async with httpx.AsyncClient() as client:
+                response = await client.get(self.search_service_url, params=params, timeout=5.0)
+                if response.status_code == 200:
+                    tours = response.json()
+                    if not tours:
+                        return "Không tìm thấy tour nào phù hợp trong hệ thống."
+                    
+                    context_chunks = [self._build_text_for_record(t) for t in tours[:5]] # Lấy top 5
+                    return "\n\n".join(context_chunks)
+                else:
+                    print(f"Search-service returned status code {response.status_code}")
         except Exception as e:
-            print(f"Error getting embedding: {e}")
-            return []
-
-    async def search_tours_in_mongo(self, query_text: str) -> str:
-        """
-        1. Get embedding for query_text
-        2. Perform $vectorSearch in MongoDB Atlas
-        3. Format the result into a context string
-        """
-        # MOCK IMPLEMENTATION FOR NOW until MongoDB Atlas is fully connected
-        print(f"Searching tours for query: {query_text}")
-        
-        # In a real scenario, you would do:
-        # query_vector = await self.get_embedding(query_text)
-        # db = get_database()
-        # results = await db.tours.aggregate([ { "$vectorSearch": { ... } } ]).to_list(length=3)
-        # return "\n\n".join([self._build_text_for_record("tour_package", r) for r in results])
-        
-        # Mock Context
+            print(f"Error calling Search-service: {e}")
+            
+        # Fallback Mock data nếu Java Service chưa chạy
+        print("Using fallback mock data for RAG...")
         mock_tour = {
-            "name": "Tour Nha Trang - Đảo Khỉ - Suối Hoa Lan",
-            "destination": "Nha Trang",
-            "price": "3500000",
-            "duration_days": 3,
-            "duration_nights": 2,
-            "itinerary_summary": "Ngày 1: Tham quan tháp bà Ponagar. Ngày 2: Lặn ngắm san hô đảo Khỉ. Ngày 3: Tắm bùn khoáng.",
-            "rating": 4.8,
-            "travel_style": "Biển đảo, Nghỉ dưỡng"
+            "id": "TOUR_MOCK_1",
+            "title": "Tour Nha Trang - Đảo Khỉ - Suối Hoa Lan (Mock)",
+            "destinations": ["Nha Trang", "Đảo Khỉ"]
         }
-        return self._build_text_for_record("tour_package", mock_tour)
+        return self._build_text_for_record(mock_tour)
 
 rag_service = RagService()
