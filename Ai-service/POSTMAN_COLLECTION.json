@@ -1,0 +1,971 @@
+{
+  "info": {
+    "name": "GoTourNow AI Chatbot - WebTour Test Suite",
+    "description": "Complete test collection for AI chatbot covering 10 evaluation criteria",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "A. Basic Conversational Ability",
+      "item": [
+        {
+          "name": "A1 - Tour Đà Lạt giá bao nhiêu?",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"A1\",\n  \"message\": \"Tour Đà Lạt giá bao nhiêu?\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "A2 - Tour này đi mấy ngày?",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"A1\",\n  \"message\": \"Tour này đi mấy ngày?\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "A3 - Có bao gồm vé máy bay không?",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"A1\",\n  \"message\": \"Có bao gồm vé máy bay không?\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "A4 - Khách sạn mấy sao?",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"A1\",\n  \"message\": \"Khách sạn mấy sao?\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "A5 - Lịch trình tour như nào?",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"A1\",\n  \"message\": \"Lịch trình tour như nào?\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "B. Intent Understanding",
+      "item": [
+        {
+          "name": "B1 - Tìm tour biển",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"B1\",\n  \"message\": \"Tìm tour biển\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "B2 - Tour A khác gì tour B?",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"B2\",\n  \"message\": \"Tour A khác gì tour B?\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "B3 - Đơn của tôi đâu?",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"B3\",\n  \"message\": \"Đơn của tôi đâu?\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "B4 - Tour hôm trước quá tệ",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"B4\",\n  \"message\": \"Tour hôm trước quá tệ\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "B5 - Đi đâu tháng 7 đẹp?",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"B5\",\n  \"message\": \"Đi đâu tháng 7 đẹp?\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "C. Context Memory & Multi-turn",
+      "item": [
+        {
+          "name": "C1.1 - Tôi muốn đi Đà Lạt",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"C1\",\n  \"message\": \"Tôi muốn đi Đà Lạt\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "C1.2 - Đi 3 ngày nhé",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"C1\",\n  \"message\": \"Đi 3 ngày nhé\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "C1.3 - Có rẻ hơn không?",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"C1\",\n  \"message\": \"Có rẻ hơn không?\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "C2.1 - Mình thích đi biển với người yêu",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"C2\",\n  \"message\": \"Mình thích đi biển với người yêu\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "C2.2 - Ngân sách 7 triệu",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"C2\",\n  \"message\": \"Ngân sách 7 triệu\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "D. Recommendation Intelligence",
+      "item": [
+        {
+          "name": "D1 - Tháng 11 nên đi đâu?",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"D1\",\n  \"message\": \"Tháng 11 nên đi đâu?\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "D2 - Ngân sách 7 triệu nên đi đâu?",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"D2\",\n  \"message\": \"Ngân sách 7 triệu nên đi đâu?\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "D3 - Tôi thích thiên nhiên",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"D3\",\n  \"message\": \"Tôi thích thiên nhiên\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "D4 - Tôi có 10 triệu, đi Nhật, gia đình, không thích lịch dày",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"D4\",\n  \"message\": \"Tôi có 10 triệu, đi Nhật, gia đình, không thích lịch dày\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "E. Booking Support & Action",
+      "item": [
+        {
+          "name": "E1 - Kiểm tra booking BK123",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"E1\",\n  \"message\": \"Kiểm tra booking BK123\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "E2 - Tôi muốn hủy booking BK456",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"E2\",\n  \"message\": \"Tôi muốn hủy booking BK456\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "E3 - Booking của tôi đâu?",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"E3\",\n  \"message\": \"Booking của tôi đâu?\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "E4 - Tôi đã thanh toán chưa?",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"E4\",\n  \"message\": \"Tôi đã thanh toán chưa?\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "F. Complaint & Emotional Handling",
+      "item": [
+        {
+          "name": "F1 - Tour hôm trước quá tệ",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"F1\",\n  \"message\": \"Tour hôm trước quá tệ\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "F2 - Tôi thất vọng về khách sạn",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"F2\",\n  \"message\": \"Tôi thất vọng về khách sạn\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "F3 - CSKH phản hồi quá chậm",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"F3\",\n  \"message\": \"CSKH phản hồi quá chậm\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "G. Casual Conversation",
+      "item": [
+        {
+          "name": "G1 - Xin chào",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"G1\",\n  \"message\": \"Xin chào\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "G2 - Bạn là ai?",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"G1\",\n  \"message\": \"Bạn là ai?\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "G3 - Bạn thích đi đâu?",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"G1\",\n  \"message\": \"Bạn thích đi đâu?\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "H. Ambiguous Queries",
+      "item": [
+        {
+          "name": "H1 - Đi đâu đẹp?",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"H1\",\n  \"message\": \"Đi đâu đẹp?\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "H2 - Tour nào hot?",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"H2\",\n  \"message\": \"Tour nào hot?\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "H3 - Có gì vui không?",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"H3\",\n  \"message\": \"Có gì vui không?\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "I. Edge Cases - Typos & Mixed Language",
+      "item": [
+        {
+          "name": "I1 - tour dl 3n2d",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"I1\",\n  \"message\": \"tour dl 3n2d\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "I2 - di bien budget 5tr",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"I2\",\n  \"message\": \"di bien budget 5tr\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "I3 - toi muon di da lat",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"I3\",\n  \"message\": \"toi muon di da lat\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "J. Comparison & Reasoning",
+      "item": [
+        {
+          "name": "J1 - So sánh tour A và B",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"J1\",\n  \"message\": \"So sánh tour A và B\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "J2 - Tour nào đáng tiền hơn?",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"J1\",\n  \"message\": \"Tour nào đáng tiền hơn?\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "J3 - Tour nào lịch trình nhẹ hơn?",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"J1\",\n  \"message\": \"Tour nào lịch trình nhẹ hơn?\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat", ""]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

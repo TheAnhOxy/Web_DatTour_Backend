@@ -2,6 +2,7 @@ from google import genai
 from app.core.config import settings
 from app.models.chat import ExtractedEntities
 import httpx
+from app.services.mock_travel_knowledge import mock_travel_assistant
 
 class RagService:
     def __init__(self):
@@ -26,6 +27,10 @@ class RagService:
         Gọi API sang Search Service (Java) dựa trên Entities đã trích xuất.
         Thay vì tự query Elasticsearch, AI Service giao việc này cho Backend Adapter.
         """
+        if settings.AI_MODE.lower() in {"mock", "test", "demo"}:
+            print("Using mock data for RAG because AI_MODE=mock/test/demo...")
+            return mock_travel_assistant.build_tour_context(entities, entities.destination or "")
+
         params = {}
         if entities.destination:
             params['destination'] = entities.destination
@@ -49,11 +54,6 @@ class RagService:
             
         # Fallback Mock data nếu Java Service chưa chạy
         print("Using fallback mock data for RAG...")
-        mock_tour = {
-            "id": "TOUR_MOCK_1",
-            "title": "Tour Nha Trang - Đảo Khỉ - Suối Hoa Lan (Mock)",
-            "destinations": ["Nha Trang", "Đảo Khỉ"]
-        }
-        return self._build_text_for_record(mock_tour)
+        return mock_travel_assistant.build_tour_context(entities, entities.destination or "")
 
 rag_service = RagService()
