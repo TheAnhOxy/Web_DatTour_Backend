@@ -2,6 +2,35 @@ import httpx
 from typing import Dict, Any, Callable
 import inspect
 
+MOCK_BOOKINGS: Dict[str, Dict[str, Any]] = {
+    "BK123": {
+        "booking_id": "BK123",
+        "status": "confirmed",
+        "customer_name": "Nguyen Van A",
+        "tour_name": "Tour Đà Lạt 3N2D",
+        "departure_date": "2026-06-28",
+        "amount": 6900000,
+    },
+    "BK456": {
+        "booking_id": "BK456",
+        "status": "pending_payment",
+        "customer_name": "Tran Thi B",
+        "tour_name": "Tour Nha Trang 4N3D",
+        "departure_date": "2026-07-05",
+        "amount": 5800000,
+    },
+    "BK789": {
+        "booking_id": "BK789",
+        "status": "cancelled",
+        "customer_name": "Le Van C",
+        "tour_name": "Tour Phú Quốc 4N3D",
+        "departure_date": "2026-07-12",
+        "amount": 8900000,
+    },
+}
+
+MOCK_SUPPORT_TICKETS: list[Dict[str, Any]] = []
+
 class ToolRegistry:
     def __init__(self):
         self.tools: Dict[str, Callable] = {}
@@ -42,9 +71,56 @@ async def check_booking_status(booking_id: str) -> str:
     #     res = await client.get(f"http://booking-service:8084/api/bookings/{booking_id}")
     
     # Mock data
-    if "123" in booking_id:
-        return f"Đơn hàng {booking_id} của quý khách đã được THANH TOÁN THÀNH CÔNG và ĐÃ ĐƯỢC XÁC NHẬN. Hướng dẫn viên sẽ liên hệ trước ngày đi 1 ngày."
+    normalized_id = booking_id.strip().upper()
+    booking = MOCK_BOOKINGS.get(normalized_id)
+    if booking:
+        return (
+            f"Đơn hàng {normalized_id} của quý khách đang ở trạng thái {booking['status']}. "
+            f"Tour: {booking['tour_name']}. Ngày khởi hành: {booking['departure_date']}."
+        )
     return f"Không tìm thấy đơn hàng nào có mã {booking_id}. Quý khách vui lòng kiểm tra lại."
+
+
+@tool_registry.register
+async def cancel_booking(booking_id: str, reason: str = "") -> str:
+    """
+    Sử dụng tool này khi người dùng muốn hủy booking đã đặt.
+    Args:
+        booking_id: Mã đơn hàng.
+        reason: Lý do hủy.
+    """
+    normalized_id = booking_id.strip().upper()
+    booking = MOCK_BOOKINGS.get(normalized_id)
+    if not booking:
+        return f"Không tìm thấy đơn hàng nào có mã {booking_id}."
+    if booking["status"] == "cancelled":
+        return f"Đơn hàng {normalized_id} đã được hủy trước đó."
+
+    booking["status"] = "cancelled"
+    reason_text = f" Lý do: {reason}." if reason else ""
+    return f"Đơn hàng {normalized_id} đã được hủy thành công.{reason_text}"
+
+
+@tool_registry.register
+async def create_support_ticket(booking_id: str = "", issue_type: str = "general", description: str = "") -> str:
+    """
+    Sử dụng tool này khi cần tạo ticket hỗ trợ cho khách hàng.
+    Args:
+        booking_id: Mã booking liên quan, nếu có.
+        issue_type: Loại vấn đề.
+        description: Mô tả ngắn.
+    """
+    ticket_id = f"TICK-{len(MOCK_SUPPORT_TICKETS) + 1:04d}"
+    ticket = {
+        "ticket_id": ticket_id,
+        "booking_id": booking_id,
+        "issue_type": issue_type,
+        "description": description,
+        "status": "open",
+    }
+    MOCK_SUPPORT_TICKETS.append(ticket)
+    booking_part = f" cho booking {booking_id}" if booking_id else ""
+    return f"Đã tạo ticket hỗ trợ {ticket_id}{booking_part}. Bộ phận CSKH sẽ liên hệ sớm nhất có thể."
 
 @tool_registry.register
 def get_current_weather(location: str) -> str:
