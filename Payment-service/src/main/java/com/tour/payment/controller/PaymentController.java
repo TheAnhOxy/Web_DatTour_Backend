@@ -45,16 +45,27 @@ public class PaymentController {
     @PostMapping("/sepay-webhook")
     public ResponseEntity<ApiResponse> handleSePayWebhook(@RequestBody SePayWebhookRequest webhookData) {
         try {
+            String transactionId = webhookData.resolveTransactionId();
+            String status        = webhookData.resolveStatus();
+
+            if (transactionId == null || transactionId.isBlank()) {
+                log.warn("[SePay Webhook] Bỏ qua: không xác định được transactionId từ payload");
+                return ResponseEntity.ok(ApiResponse.builder().status(200).message("Ignored: no transactionId").build());
+            }
+
             Map<String, String> params = new HashMap<>();
-            params.put("transactionId", webhookData.getTransactionId());
-            params.put("status", webhookData.getStatus());
+            params.put("transactionId", transactionId);
+            params.put("status", status);
             if (webhookData.getIdempotencyKey() != null && !webhookData.getIdempotencyKey().isBlank()) {
                 params.put("idempotencyKey", webhookData.getIdempotencyKey());
             }
+
+            log.info("[SePay Webhook] transactionId={} status={}", transactionId, status);
             paymentService.processCallback("SEPAY", params);
             return ResponseEntity.ok(ApiResponse.builder()
                     .status(200).message("Xử lý SePay thành công").build());
         } catch (Exception ex) {
+            log.warn("[SePay Webhook] Lỗi: {}", ex.getMessage());
             return ResponseEntity.badRequest().body(ApiResponse.builder()
                     .status(400).message("Lỗi SePay: " + ex.getMessage()).build());
         }

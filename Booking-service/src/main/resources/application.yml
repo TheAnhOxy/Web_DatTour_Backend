@@ -1,7 +1,6 @@
 server:
   port: 8084
 
-
 spring:
   application:
     name: booking-service
@@ -11,7 +10,8 @@ spring:
     # nhưng khi chạy Docker nó sẽ bị đè bởi biến KAFKA_BOOTSTRAP_SERVERS
     bootstrap-servers: localhost:29092
     producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      key-serializer:
+        org.apache.kafka.common.serialization.StringSerializer
         # SỬA DÒNG NÀY: Từ StringSerializer thành JsonSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       retries: 0
@@ -31,7 +31,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: true
     open-in-view: false
     properties:
@@ -44,8 +44,8 @@ spring:
 
   flyway:
     enabled: false
-#    baseline-on-migrate: true
-#    locations: classpath:db/migration
+  #    baseline-on-migrate: true
+  #    locations: classpath:db/migration
 
   jackson:
     serialization:
@@ -54,7 +54,7 @@ spring:
     endpoints:
       web:
         exposure:
-          include: '*'
+          include: "*"
 
   logging:
     level:

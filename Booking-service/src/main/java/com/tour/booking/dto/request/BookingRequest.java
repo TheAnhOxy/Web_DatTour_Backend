@@ -17,4 +17,7 @@ public class BookingRequest {
     private Long departureId;
     private List<PassengerDTO> passengers;
     private String note;
+    private String contactName;
+    private String contactEmail;
+    private String contactPhone;
 }
