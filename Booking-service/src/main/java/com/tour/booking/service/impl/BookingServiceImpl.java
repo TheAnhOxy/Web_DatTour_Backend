@@ -93,6 +93,9 @@ public class BookingServiceImpl implements BookingService {
                     .departureId(request.getDepartureId())
                     .status("PENDING")
                     .totalAmount(totalAmount)
+                    .contactName(request.getContactName())
+                    .contactEmail(request.getContactEmail())
+                    .contactPhone(request.getContactPhone())
                     .priceSnapshot(Map.of(
                             "tourTitle", tourTitle,
                             "startDate", departureData.get("startDate") != null ? departureData.get("startDate").toString() : "",
@@ -157,6 +160,7 @@ public class BookingServiceImpl implements BookingService {
                 : null;
 
         return BookingResponse.builder()
+                .bookingId(saved.getId())
                 .bookingCode(saved.getBookingCode())
                 .status(saved.getStatus())
                 .totalAmount(saved.getTotalAmount())
@@ -270,6 +274,7 @@ public class BookingServiceImpl implements BookingService {
         Map<String, Object> priceConfig = (Map<String, Object>) booking.getPriceSnapshot().get("priceConfig");
 
         return BookingResponse.builder()
+                .bookingId(booking.getId())
                 .bookingCode(booking.getBookingCode())
                 .status(booking.getStatus())
                 .totalAmount(booking.getTotalAmount())
@@ -311,6 +316,7 @@ public class BookingServiceImpl implements BookingService {
                         .build())
                 .toList();
         return BookingResponse.builder()
+                .bookingId(booking.getId())
                 .bookingCode(booking.getBookingCode())
                 .status(booking.getStatus())
                 .totalAmount(booking.getTotalAmount())

@@ -16,6 +16,7 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 public class BookingResponse {
+    private Long bookingId;
     private String bookingCode;
     private String status;
     private BigDecimal totalAmount;

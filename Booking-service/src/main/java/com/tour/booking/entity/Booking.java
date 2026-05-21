@@ -36,6 +36,10 @@ public class Booking {
 
     private String status; // PENDING, CONFIRMED, CANCELLED, COMPLETED
 
+    private String contactName;
+    private String contactEmail;
+    private String contactPhone;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private Map<String, Object> priceSnapshot;

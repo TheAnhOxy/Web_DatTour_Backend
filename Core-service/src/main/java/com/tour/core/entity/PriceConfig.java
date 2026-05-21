@@ -15,6 +15,7 @@ public class PriceConfig {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name="departure_id")
+    @ToString.Exclude
     private Departure departure;
 
     private BigDecimal adultPrice;

@@ -40,7 +40,12 @@ public class AuthenticationGatewayFilterFactory extends AbstractGatewayFilterFac
             "/swagger-ui/**",
             "/swagger-resources/**",
             "/core/**",
-            "/bookings/**"
+            "/bookings/**",
+
+            // Webhook từ SePay & Stripe — external call, không có JWT
+            "/payments/sepay-webhook",
+            "/payments/stripe-webhook",
+            "/payments/callback"
     );
 
     public AuthenticationGatewayFilterFactory(WebClient.Builder webClientBuilder, ObjectMapper objectMapper) {

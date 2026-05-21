@@ -86,6 +86,15 @@ public class AuthController {
                 .build());
     }
 
+    @GetMapping("/profile/{id}")
+    public ResponseEntity<ApiResponse> getProfile(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.builder()
+                .status(200)
+                .message("Get profile successfully")
+                .data(authService.getUserById(id))
+                .build());
+    }
+
     @PutMapping("/profile/{id}")
     public ResponseEntity<ApiResponse> updateProfile(
             @PathVariable Long id,

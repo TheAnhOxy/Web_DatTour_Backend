@@ -26,13 +26,15 @@ public class SePayPaymentGatewayStrategy implements PaymentGatewayStrategy {
     public Payment createPayment(Map<String, Object> message, PaymentMethod method) {
         String bookingCode = message.get("bookingCode").toString();
         double amount = Double.parseDouble(message.get("totalAmount").toString());
-        String paymentUrl = sePayService.generateQrUrl(amount, bookingCode);
+        // Nội dung CK = "SEVQR" + bookingCode để SePay nhận diện tự động
+        String transferContent = "SEVQR" + bookingCode;
+        String paymentUrl = sePayService.generateQrUrl(amount, transferContent);
 
         return Payment.builder()
                 .bookingId(Long.valueOf(message.get("bookingId").toString()))
-                .transactionId(bookingCode)
+                .transactionId(transferContent) // khớp với nội dung CK người dùng nhập
                 .amount(new BigDecimal(message.get("totalAmount").toString()))
-            .status(PaymentStatus.PENDING.name())
+                .status(PaymentStatus.PENDING.name())
                 .gateway(getGateway())
                 .paymentMethod(method)
                 .paymentUrl(paymentUrl)

@@ -15,6 +15,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     Optional<Payment> findByBookingId(Long bookingId);
     Optional<Payment> findByTransactionId(String transactionId);
 
-    @Query("SELECT p FROM Payment p WHERE p.status = 'PENDING' AND p.createdAt < :cutoff")
+    @Query("SELECT p FROM Payment p WHERE p.status = 'PENDING' AND p.createdAt < :cutoff AND p.transactionId IS NOT NULL")
     List<Payment> findPendingExpired(@Param("cutoff") LocalDateTime cutoff);
 }
