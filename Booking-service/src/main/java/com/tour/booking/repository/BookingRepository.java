@@ -16,6 +16,14 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     Optional<Booking> findByBookingCode(String bookingCode);
     List<Booking> findByStatusAndCreatedAtBefore(String status, LocalDateTime time);
 
+    /** Đơn online (chưa chọn thanh toán tại quầy) — hết hạn 10 phút */
+    @Query("SELECT b FROM Booking b WHERE b.status = 'PENDING' AND (b.paymentMethod IS NULL OR b.paymentMethod <> 'CASH_OFFICE') AND b.createdAt < :cutoff")
+    List<Booking> findOnlinePendingExpired(@Param("cutoff") LocalDateTime cutoff);
+
+    /** Đơn thanh toán tại quầy — hết hạn theo paymentDueAt */
+    List<Booking> findByStatusAndPaymentMethodAndPaymentDueAtBefore(
+            String status, String paymentMethod, LocalDateTime paymentDueAt);
+
     List<Booking> findByUserIdOrderByCreatedAtDesc(Long userId);
     @Query("SELECT b FROM Booking b LEFT JOIN FETCH b.passengers")
     List<Booking> findAllWithPassengers();

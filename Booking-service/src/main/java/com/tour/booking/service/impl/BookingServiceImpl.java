@@ -279,6 +279,8 @@ public class BookingServiceImpl implements BookingService {
                 .status(booking.getStatus())
                 .totalAmount(booking.getTotalAmount())
                 .createdAt(booking.getCreatedAt())
+                .paymentMethod(booking.getPaymentMethod())
+                .paymentDueAt(booking.getPaymentDueAt())
                 .tourTitle((String) booking.getPriceSnapshot().get("tourTitle"))
                 .startDate(String.valueOf(booking.getPriceSnapshot().get("startDate")))
                 .priceDetail(priceConfig)
@@ -321,6 +323,8 @@ public class BookingServiceImpl implements BookingService {
                 .status(booking.getStatus())
                 .totalAmount(booking.getTotalAmount())
                 .createdAt(booking.getCreatedAt())
+                .paymentMethod(booking.getPaymentMethod())
+                .paymentDueAt(booking.getPaymentDueAt())
                 .passengers(passengerDTOs)
 
                 // Lấy từ Snapshot (Dữ liệu quá khứ)

@@ -118,6 +118,7 @@ public class EmailServiceImpl implements EmailService {
                                               String amount, String gateway) {
         String gatewayLabel = "SEPAY".equalsIgnoreCase(gateway) ? "SePay (QR chuyển khoản)"
                             : "STRIPE".equalsIgnoreCase(gateway) ? "Stripe (Thẻ quốc tế)"
+                            : "CASH_OFFICE".equalsIgnoreCase(gateway) ? "Tiền mặt tại văn phòng"
                             : gateway;
 
         String body =
@@ -165,6 +166,50 @@ public class EmailServiceImpl implements EmailService {
                "  <td style='padding:10px 16px;color:#666;width:40%;border-bottom:1px solid #e8eaf0'>" + label + "</td>" +
                "  <td style='padding:10px 16px;border-bottom:1px solid #e8eaf0'>" + value + "</td>" +
                "</tr>";
+    }
+
+    @Override
+    public void sendBookingOfficeReservationEmail(String to, String name, String bookingCode,
+                                                  String tourTitle, String startDate, String amount,
+                                                  String paymentDueAt, String officeAddress,
+                                                  String officeHours, String officeHotline) {
+        String body =
+            "<p style='font-size:16px'>Xin chào <strong>" + name + "</strong>,</p>" +
+            "<p>Bạn đã chọn <strong>thanh toán tiền mặt tại văn phòng " + APP_NAME + "</strong>. " +
+            "Vui lòng hoàn tất thanh toán <strong>trong vòng 48 giờ</strong> kể từ lúc đặt tour (hạn cụ thể bên dưới).</p>" +
+
+            "<table style='width:100%;border-collapse:collapse;margin:24px 0;font-size:14px'>" +
+            "  <thead>" +
+            "    <tr style='background:" + ACCENT_COLOR + ";color:#fff'>" +
+            "      <th colspan='2' style='padding:12px 16px;text-align:left'>📋 Thông tin đặt chỗ</th>" +
+            "    </tr>" +
+            "  </thead>" +
+            "  <tbody>" +
+            row("🔖 Mã đặt chỗ", "<strong style='font-size:16px;color:" + BRAND_COLOR + "'>" + bookingCode + "</strong>", false) +
+            row("🗺 Tour", tourTitle, true) +
+            row("📅 Khởi hành", formatDate(startDate), false) +
+            row("💰 Số tiền tại quầy", "<strong style='color:#D32F2F'>" + amount + "</strong>", true) +
+            row("⏰ Hạn thanh toán", "<strong style='color:#c96200'>" + paymentDueAt + "</strong>", false) +
+            "  </tbody>" +
+            "</table>" +
+
+            "<div style='background:#FFF8E1;border-left:4px solid " + ACCENT_COLOR + ";padding:14px 18px;margin:20px 0;border-radius:0 8px 8px 0'>" +
+            "  <p style='margin:0 0 8px;font-weight:700;color:#7A4E00'>🏢 Hướng dẫn thanh toán tại quầy</p>" +
+            "  <p style='margin:0;font-size:13px;color:#5D4037;line-height:1.6'>" +
+            "    • Mang <strong>mã đặt chỗ " + bookingCode + "</strong> và CMND/CCCD<br>" +
+            "    • Đến: <strong>" + officeAddress + "</strong><br>" +
+            "    • Giờ làm việc: " + officeHours + "<br>" +
+            "    • Hotline: " + officeHotline +
+            "  </p>" +
+            "</div>" +
+
+            "<p style='color:#666;font-size:13px'>" +
+            "Sau khi nhận tiền, nhân viên sẽ xác nhận và bạn sẽ nhận email <strong>xác nhận thanh toán thành công</strong>. " +
+            "Nếu quá hạn trên (48 giờ sau khi đặt), đơn có thể tự động hủy.</p>";
+
+        sendHtml(to,
+            "[" + APP_NAME + "] Hướng dẫn thanh toán tại văn phòng - " + bookingCode,
+            wrapLayout(body));
     }
 
     private String formatDate(String rawDate) {

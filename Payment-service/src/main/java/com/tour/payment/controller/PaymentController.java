@@ -117,6 +117,30 @@ public class PaymentController {
                     .status(400).message(ex.getMessage()).build());
         }
     }
+    /**
+     * Tạo hoặc thay thế payment với đúng gateway user chọn.
+     * Body: { "bookingId": 123, "gateway": "STRIPE", "bookingCode": "BK-...", "amount": 5000000 }
+     */
+    @PostMapping("/initiate")
+    public ResponseEntity<ApiResponse> initiatePayment(@RequestBody Map<String, Object> body) {
+        try {
+            Long bookingId = Long.valueOf(body.get("bookingId").toString());
+            String gateway = body.get("gateway").toString().toUpperCase();
+            String bookingCode = body.get("bookingCode") != null ? body.get("bookingCode").toString() : null;
+            java.math.BigDecimal amount = null;
+            if (body.get("amount") != null) {
+                amount = new java.math.BigDecimal(body.get("amount").toString());
+            }
+            var result = paymentService.initiatePayment(bookingId, gateway, bookingCode, amount);
+            return ResponseEntity.ok(ApiResponse.builder()
+                    .status(200).message("OK").data(result).build());
+        } catch (Exception e) {
+            log.warn("[Initiate] Lỗi: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.builder()
+                    .status(400).message(e.getMessage()).build());
+        }
+    }
+
     @GetMapping("/admin/all")
     public ResponseEntity<ApiResponse> getAllPayments() {
         return ResponseEntity.ok(ApiResponse.builder()
@@ -136,6 +160,50 @@ public class PaymentController {
     @GetMapping("/transaction/{transactionId}")
     public ResponseEntity<PaymentResponse> getPaymentByTransaction(@PathVariable String transactionId) {
         return ResponseEntity.ok(paymentService.getPaymentByTransactionId(transactionId));
+    }
+
+    /**
+     * Xác nhận Stripe ngay sau redirect (không chờ webhook — nhanh như SePay trên UI).
+     */
+    /**
+     * Khách xác nhận đặt chỗ & thanh toán tại quầy (trong 48h sau khi đặt) — gửi email hướng dẫn.
+     */
+    @PostMapping("/cash-office/confirm-reservation")
+    public ResponseEntity<ApiResponse> confirmOfficeReservation(@RequestBody Map<String, Object> body) {
+        try {
+            Long bookingId = Long.valueOf(body.get("bookingId").toString());
+            String bookingCode = body.get("bookingCode").toString();
+            java.math.BigDecimal amount = body.get("amount") != null
+                    ? new java.math.BigDecimal(body.get("amount").toString()) : null;
+            String contactEmail = body.get("contactEmail") != null ? body.get("contactEmail").toString() : null;
+            String contactName = body.get("contactName") != null ? body.get("contactName").toString() : null;
+            String tourTitle = body.get("tourTitle") != null ? body.get("tourTitle").toString() : null;
+            String startDate = body.get("startDate") != null ? body.get("startDate").toString() : null;
+            String bookedAt = body.get("bookedAt") != null ? body.get("bookedAt").toString()
+                    : body.get("createdAt") != null ? body.get("createdAt").toString() : null;
+
+            var result = paymentService.confirmOfficeReservation(
+                    bookingId, bookingCode, amount, contactEmail, contactName, tourTitle, startDate, bookedAt);
+            return ResponseEntity.ok(ApiResponse.builder()
+                    .status(200).message("Đã xác nhận đặt chỗ tại quầy và gửi email hướng dẫn").data(result).build());
+        } catch (Exception e) {
+            log.warn("[Office] Lỗi: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.builder()
+                    .status(400).message(e.getMessage()).build());
+        }
+    }
+
+    @PostMapping("/stripe/confirm-session")
+    public ResponseEntity<ApiResponse> confirmStripeSession(@RequestParam("session_id") String sessionId) {
+        try {
+            var result = paymentService.confirmStripeSession(sessionId);
+            return ResponseEntity.ok(ApiResponse.builder()
+                    .status(200).message("OK").data(result).build());
+        } catch (Exception e) {
+            log.warn("[Stripe Confirm] Lỗi: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.builder()
+                    .status(400).message(e.getMessage()).build());
+        }
     }
 
 

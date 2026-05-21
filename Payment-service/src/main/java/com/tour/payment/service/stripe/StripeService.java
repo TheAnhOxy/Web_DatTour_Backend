@@ -18,6 +18,9 @@ import java.math.BigDecimal;
 @Slf4j
 public class StripeService {
 
+    /** Stripe yêu cầu tối thiểu ~50 cent USD; VND ~20.000đ an toàn cho môi trường test. */
+    public static final long MIN_VND_AMOUNT = 20_000L;
+
     @Value("${stripe.secret-key}")
     private String secretKey;
 
@@ -43,6 +46,12 @@ public class StripeService {
      * @return Session chứa getId() → transactionId và getUrl() → paymentUrl
      */
     public Session createCheckoutSession(Long bookingId, String bookingCode, BigDecimal amount) {
+        long vndAmount = amount.longValue();
+        if (vndAmount < MIN_VND_AMOUNT) {
+            throw new RuntimeException(
+                    "Số tiền tối thiểu cho Stripe là " + MIN_VND_AMOUNT + "đ (hiện tại: " + vndAmount + "đ). "
+                            + "Stripe yêu cầu tương đương ít nhất 50 cent USD.");
+        }
         try {
             SessionCreateParams params = SessionCreateParams.builder()
                     .setMode(SessionCreateParams.Mode.PAYMENT)
@@ -76,6 +85,20 @@ public class StripeService {
         } catch (StripeException ex) {
             log.error("[Stripe] Lỗi tạo Checkout Session cho booking {}: {}", bookingCode, ex.getMessage());
             throw new RuntimeException("Không thể tạo Stripe Checkout Session: " + ex.getMessage(), ex);
+        }
+    }
+
+    /**
+     * Lấy trạng thái session trực tiếp từ Stripe (dùng ngay sau khi user redirect về success URL).
+     */
+    public Session retrieveSession(String sessionId) {
+        try {
+            Session session = Session.retrieve(sessionId);
+            log.info("[Stripe] Retrieve session {} paymentStatus={}", sessionId, session.getPaymentStatus());
+            return session;
+        } catch (StripeException ex) {
+            log.error("[Stripe] Không thể lấy session {}: {}", sessionId, ex.getMessage());
+            throw new RuntimeException("Không thể xác nhận phiên Stripe: " + ex.getMessage(), ex);
         }
     }
 

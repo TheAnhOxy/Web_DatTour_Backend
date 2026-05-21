@@ -6,13 +6,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RBucket;
 import org.redisson.api.RedissonClient;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 @Component
 @RequiredArgsConstructor
@@ -22,21 +22,24 @@ public class BookingCleanupTask {
     private final BookingRepository bookingRepository;
     private final RedissonClient redissonClient;
 
-    // Chạy định kỳ mỗi 30 giây
-    @Scheduled(fixedDelay = 10, timeUnit = TimeUnit.MINUTES) // 10p
-//    @Scheduled(fixedRate = 30000)
+    @Value("${booking.hold.minutes:10}")
+    private int holdMinutes;
+
+    /** Quét mỗi 30 giây — hủy đơn PENDING quá thời gian giữ chỗ. */
+    @Scheduled(fixedDelayString = "${booking.hold.check-ms:30000}")
     @Transactional
     public void handleTimeoutBookings() {
-        // Mốc thời gian: Hiện tại trừ đi 1 phút
-        LocalDateTime timeoutThreshold = LocalDateTime.now().minusMinutes(1);
+        LocalDateTime onlineCutoff = LocalDateTime.now().minusMinutes(holdMinutes);
+        LocalDateTime now = LocalDateTime.now();
 
-        // Tìm các booking vẫn đang PENDING mà đã quá 1 phút
-        List<Booking> expiredBookings = bookingRepository
-                .findByStatusAndCreatedAtBefore("PENDING", timeoutThreshold);
+        List<Booking> expiredBookings = new java.util.ArrayList<>();
+        expiredBookings.addAll(bookingRepository.findOnlinePendingExpired(onlineCutoff));
+        expiredBookings.addAll(bookingRepository.findByStatusAndPaymentMethodAndPaymentDueAtBefore(
+                "PENDING", "CASH_OFFICE", now));
 
         if (expiredBookings.isEmpty()) return;
 
-        log.info("Phát hiện {} đơn hàng hết hạn thanh toán", expiredBookings.size());
+        log.info("Phát hiện {} đơn hàng hết hạn thanh toán (online + quầy)", expiredBookings.size());
 
         for (Booking booking : expiredBookings) {
             try {

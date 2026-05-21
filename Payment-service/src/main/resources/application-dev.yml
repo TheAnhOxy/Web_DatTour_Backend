@@ -19,8 +19,8 @@ sepay:
   template: compact
 
 stripe:
-  secret-key: sk_test_REPLACE_WITH_YOUR_STRIPE_SECRET_KEY
-  webhook-secret: whsec_REPLACE_WITH_YOUR_STRIPE_WEBHOOK_SECRET
+  secret-key: sk_test_51TZcJcFyiLwuiabvF5orsYY0C4oaxeCgENg26lRo76SQ1zGgr0cwshfotBnpXhnHbb9r1Z8tqVVmwLzv3MQar8Sj00hBryyJSQ
+  webhook-secret: whsec_2ec368782347cf05124db5ea53b7961628b3a74b7b66facd19b1d40884f5474f
   success-url: http://localhost:3000/payment/success
   cancel-url: http://localhost:3000/payment/cancel
 

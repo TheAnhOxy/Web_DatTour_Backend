@@ -56,11 +56,26 @@ public class NotificationListener {
                         (String) param.get("gateway")
                     );
                     break;
+                case "BOOKING_OFFICE_RESERVATION":
+                    emailService.sendBookingOfficeReservationEmail(
+                        recipient,
+                        (String) param.get("name"),
+                        (String) param.get("bookingCode"),
+                        (String) param.get("tourTitle"),
+                        (String) param.get("startDate"),
+                        (String) param.get("amount"),
+                        (String) param.get("paymentDueAt"),
+                        (String) param.get("officeAddress"),
+                        (String) param.get("officeHours"),
+                        (String) param.get("officeHotline")
+                    );
+                    log.info("Sent BOOKING_OFFICE_RESERVATION email to {}", recipient);
+                    break;
                 default:
                     log.warn("Unknown template code: {}", templateCode);
             }
         } catch (Exception e) {
-            log.error("Failed to process notification message: {}", e.getMessage());
+            log.error("Failed to process notification message: {}", e.getMessage(), e);
         }
     }
 }

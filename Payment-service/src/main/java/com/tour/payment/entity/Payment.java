@@ -17,6 +17,8 @@ public class Payment {
     @Column(nullable = false)
     private Long bookingId; // Tham chiếu sang Booking Service
 
+    private String bookingCode;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "payment_method_id")
     private PaymentMethod paymentMethod;
