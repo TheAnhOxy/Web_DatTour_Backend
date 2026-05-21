@@ -3,8 +3,12 @@ server:
 
 booking:
   hold:
-    minutes: 10
-    check-ms: 30000
+    minutes: 10 # Online — hủy theo createdAt
+    check-ms: 30000 # Quầy — hủy theo paymentDueAt (48h sau xác nhận, set bởi payment-service)
+  office:
+    address: "Phạm Văn chiêu, Phường 9, Gò Vấp, Hồ Chí Minh"
+    hours: "T2–T7, 8:00–17:30"
+    hotline: "1900-xxxx"
 
 spring:
   application:

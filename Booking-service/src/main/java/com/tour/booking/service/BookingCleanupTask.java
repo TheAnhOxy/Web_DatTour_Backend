@@ -29,15 +29,17 @@ public class BookingCleanupTask {
     @Scheduled(fixedDelayString = "${booking.hold.check-ms:30000}")
     @Transactional
     public void handleTimeoutBookings() {
-        LocalDateTime timeoutThreshold = LocalDateTime.now().minusMinutes(holdMinutes);
+        LocalDateTime onlineCutoff = LocalDateTime.now().minusMinutes(holdMinutes);
+        LocalDateTime now = LocalDateTime.now();
 
-        // Tìm các booking vẫn đang PENDING mà đã quá thời gian giữ chỗ
-        List<Booking> expiredBookings = bookingRepository
-                .findByStatusAndCreatedAtBefore("PENDING", timeoutThreshold);
+        List<Booking> expiredBookings = new java.util.ArrayList<>();
+        expiredBookings.addAll(bookingRepository.findOnlinePendingExpired(onlineCutoff));
+        expiredBookings.addAll(bookingRepository.findByStatusAndPaymentMethodAndPaymentDueAtBefore(
+                "PENDING", "CASH_OFFICE", now));
 
         if (expiredBookings.isEmpty()) return;
 
-        log.info("Phát hiện {} đơn hàng hết hạn thanh toán", expiredBookings.size());
+        log.info("Phát hiện {} đơn hàng hết hạn thanh toán (online + quầy)", expiredBookings.size());
 
         for (Booking booking : expiredBookings) {
             try {

@@ -165,6 +165,34 @@ public class PaymentController {
     /**
      * Xác nhận Stripe ngay sau redirect (không chờ webhook — nhanh như SePay trên UI).
      */
+    /**
+     * Khách xác nhận đặt chỗ & thanh toán tại quầy (trong 48h sau khi đặt) — gửi email hướng dẫn.
+     */
+    @PostMapping("/cash-office/confirm-reservation")
+    public ResponseEntity<ApiResponse> confirmOfficeReservation(@RequestBody Map<String, Object> body) {
+        try {
+            Long bookingId = Long.valueOf(body.get("bookingId").toString());
+            String bookingCode = body.get("bookingCode").toString();
+            java.math.BigDecimal amount = body.get("amount") != null
+                    ? new java.math.BigDecimal(body.get("amount").toString()) : null;
+            String contactEmail = body.get("contactEmail") != null ? body.get("contactEmail").toString() : null;
+            String contactName = body.get("contactName") != null ? body.get("contactName").toString() : null;
+            String tourTitle = body.get("tourTitle") != null ? body.get("tourTitle").toString() : null;
+            String startDate = body.get("startDate") != null ? body.get("startDate").toString() : null;
+            String bookedAt = body.get("bookedAt") != null ? body.get("bookedAt").toString()
+                    : body.get("createdAt") != null ? body.get("createdAt").toString() : null;
+
+            var result = paymentService.confirmOfficeReservation(
+                    bookingId, bookingCode, amount, contactEmail, contactName, tourTitle, startDate, bookedAt);
+            return ResponseEntity.ok(ApiResponse.builder()
+                    .status(200).message("Đã xác nhận đặt chỗ tại quầy và gửi email hướng dẫn").data(result).build());
+        } catch (Exception e) {
+            log.warn("[Office] Lỗi: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.builder()
+                    .status(400).message(e.getMessage()).build());
+        }
+    }
+
     @PostMapping("/stripe/confirm-session")
     public ResponseEntity<ApiResponse> confirmStripeSession(@RequestParam("session_id") String sessionId) {
         try {

@@ -31,8 +31,10 @@ public class PaymentTimeoutScheduler {
      */
     @Scheduled(fixedDelayString = "${payment.timeout.check-ms:60000}")
     public void expireStalePayments() {
-        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(timeoutMinutes);
-        List<Payment> stalePayments = paymentRepository.findPendingExpired(cutoff);
+        LocalDateTime onlineCutoff = LocalDateTime.now().minusMinutes(timeoutMinutes);
+
+        // CASH_OFFICE: hủy theo booking.paymentDueAt (booking-service), không theo createdAt payment
+        List<Payment> stalePayments = new java.util.ArrayList<>(paymentRepository.findPendingOnlineExpired(onlineCutoff));
 
         if (stalePayments.isEmpty()) {
             return;

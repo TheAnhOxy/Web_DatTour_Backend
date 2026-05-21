@@ -9,4 +9,9 @@ public interface EmailService {
                                       String tourTitle, String startDate,
                                       String amount, String gateway);
 
+    void sendBookingOfficeReservationEmail(String to, String name, String bookingCode,
+                                           String tourTitle, String startDate, String amount,
+                                           String paymentDueAt, String officeAddress,
+                                           String officeHours, String officeHotline);
+
 }

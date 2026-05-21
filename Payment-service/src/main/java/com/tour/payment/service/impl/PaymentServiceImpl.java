@@ -2,6 +2,7 @@ package com.tour.payment.service.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tour.payment.dto.response.OfficeReservationResponse;
 import com.tour.payment.dto.response.PaymentDetailResponse;
 import com.tour.payment.dto.response.PaymentResponse;
 import com.tour.payment.entity.Payment;
@@ -18,6 +19,7 @@ import com.tour.payment.service.callback.PaymentCallbackData;
 import com.tour.payment.service.gateway.PaymentGatewayStrategy;
 import com.tour.payment.service.gateway.PaymentGatewayStrategyFactory;
 import com.tour.payment.service.stripe.StripeService;
+import com.tour.payment.util.OfficePaymentSchedule;
 import com.tour.payment.service.state.PaymentEvent;
 import com.tour.payment.service.state.PaymentStateMachine;
 import com.tour.payment.service.state.PaymentStatus;
@@ -25,7 +27,9 @@ import com.stripe.model.checkout.Session;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,6 +54,10 @@ public class PaymentServiceImpl implements PaymentService {
     private final OutboxEventRepository outboxEventRepository;
     private final ObjectMapper objectMapper;
     private final StripeService stripeService;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
+
+    @Value("${payment.office.hours-after-booking:48}")
+    private int officeHoldHours;
 
     public PaymentResponse getPaymentByBookingId(Long bookingId) {
         Payment payment = paymentRepository.findByBookingId(bookingId)
@@ -143,6 +151,43 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         return getPaymentByTransactionId(sessionId);
+    }
+
+    @Override
+    @Transactional
+    public OfficeReservationResponse confirmOfficeReservation(
+            Long bookingId, String bookingCode, BigDecimal amount,
+            String contactEmail, String contactName, String tourTitle, String startDate, String bookedAt) {
+
+        if (contactEmail == null || contactEmail.isBlank()) {
+            throw new RuntimeException("Thiếu email liên hệ để gửi hướng dẫn thanh toán tại quầy");
+        }
+
+        LocalDateTime bookedAtTime = OfficePaymentSchedule.parseBookedAt(bookedAt);
+        LocalDateTime paymentDueAt = OfficePaymentSchedule.resolvePaymentDueAt(bookedAtTime, officeHoldHours);
+
+        PaymentResponse payment = initiatePayment(bookingId, "CASH_OFFICE", bookingCode, amount);
+
+        Map<String, Object> officeHoldEvent = new HashMap<>();
+        officeHoldEvent.put("bookingId", bookingId);
+        officeHoldEvent.put("paymentDueAt", paymentDueAt.toString());
+        kafkaTemplate.send("booking-office-reserved-topic", bookingCode, officeHoldEvent);
+
+        String dueStr = OfficePaymentSchedule.formatDisplay(paymentDueAt);
+
+        // Email gửi qua booking-service (booking-office-reserved-topic → notification-topic),
+        // cùng luồng đã hoạt động với SePay/Stripe (BOOKING_CONFIRMED).
+        log.info("[Office] Đã xác nhận đặt chỗ tại quầy bookingCode={}, hạn {} — email do booking-service gửi",
+                bookingCode, dueStr);
+
+        return OfficeReservationResponse.builder()
+                .bookingId(bookingId)
+                .bookingCode(bookingCode)
+                .gateway(payment.getGateway())
+                .status(payment.getStatus())
+                .paymentDueAt(paymentDueAt.toString())
+                .emailSent(true)
+                .build();
     }
 
     @Override

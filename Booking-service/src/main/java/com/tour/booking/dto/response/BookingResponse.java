@@ -21,6 +21,8 @@ public class BookingResponse {
     private String status;
     private BigDecimal totalAmount;
     private LocalDateTime createdAt;
+    private String paymentMethod;
+    private LocalDateTime paymentDueAt;
     private Long userId;
     private String message;
     private String tourTitle;

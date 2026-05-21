@@ -25,4 +25,11 @@ public interface PaymentService {
      */
     PaymentResponse confirmStripeSession(String sessionId);
 
+    /**
+     * Khách xác nhận đặt chỗ thanh toán tại quầy: hạn = 48h sau lúc đặt (bookedAt), gửi email hướng dẫn.
+     */
+    com.tour.payment.dto.response.OfficeReservationResponse confirmOfficeReservation(
+            Long bookingId, String bookingCode, java.math.BigDecimal amount,
+            String contactEmail, String contactName, String tourTitle, String startDate, String bookedAt);
+
 }

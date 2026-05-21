@@ -36,6 +36,13 @@ public class Booking {
 
     private String status; // PENDING, CONFIRMED, CANCELLED, COMPLETED
 
+    /** BANK_TRANSFER, STRIPE, CASH_OFFICE — null = giữ chỗ online 10 phút */
+    @Column(length = 30)
+    private String paymentMethod;
+
+    /** Hạn thanh toán tại quầy (thường createdAt + 24h) */
+    private LocalDateTime paymentDueAt;
+
     private String contactName;
     private String contactEmail;
     private String contactPhone;
