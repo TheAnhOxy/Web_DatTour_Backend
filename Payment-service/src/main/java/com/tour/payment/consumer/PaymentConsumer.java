@@ -30,10 +30,11 @@ public class PaymentConsumer {
                 .filter(PaymentMethod::getIsActive)
                 .orElseThrow(() -> new RuntimeException("Phương thức thanh toán chưa kích hoạt!"));
 
-        if (paymentRepository.findByTransactionId(bookingCode).isEmpty()) {
+        if (paymentRepository.findByBookingId(Long.valueOf(message.get("bookingId").toString())).isEmpty()) {
             String gateway = method.getName() == null ? "CASH_OFFICE" : method.getName();
             PaymentGatewayStrategy strategy = gatewayStrategyFactory.getStrategy(gateway);
             Payment payment = strategy.createPayment(message, method);
+            payment.setBookingCode(bookingCode);
 
             paymentRepository.save(payment);
             log.info("=> Đã tạo Payment Intent có URL cho đơn: {}", bookingCode);

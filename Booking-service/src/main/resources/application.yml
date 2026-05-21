@@ -1,6 +1,11 @@
 server:
   port: 8084
 
+booking:
+  hold:
+    minutes: 10
+    check-ms: 30000
+
 spring:
   application:
     name: booking-service

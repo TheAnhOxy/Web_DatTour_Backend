@@ -75,4 +75,4 @@ outbox:
 payment:
   timeout:
     minutes: 10       # Số phút trước khi payment PENDING bị hủy tự động
-    check-ms: 60000   # Tần suất kiểm tra (ms) — mặc định 60 giây
+    check-ms: 30000   # Quét mỗi 30 giây

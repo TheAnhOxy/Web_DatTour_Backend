@@ -1,0 +1,2 @@
+ALTER TABLE payments
+    ADD COLUMN IF NOT EXISTS booking_code VARCHAR(50);

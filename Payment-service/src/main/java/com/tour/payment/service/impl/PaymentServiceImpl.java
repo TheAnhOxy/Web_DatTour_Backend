@@ -5,19 +5,23 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tour.payment.dto.response.PaymentDetailResponse;
 import com.tour.payment.dto.response.PaymentResponse;
 import com.tour.payment.entity.Payment;
+import com.tour.payment.entity.PaymentMethod;
 import com.tour.payment.idempotency.PaymentCallbackLog;
 import com.tour.payment.idempotency.PaymentCallbackLogRepository;
 import com.tour.payment.outbox.OutboxEvent;
 import com.tour.payment.outbox.OutboxEventRepository;
 import com.tour.payment.outbox.OutboxStatus;
+import com.tour.payment.repository.PaymentMethodRepository;
 import com.tour.payment.repository.PaymentRepository;
 import com.tour.payment.service.PaymentService;
 import com.tour.payment.service.callback.PaymentCallbackData;
 import com.tour.payment.service.gateway.PaymentGatewayStrategy;
 import com.tour.payment.service.gateway.PaymentGatewayStrategyFactory;
+import com.tour.payment.service.stripe.StripeService;
 import com.tour.payment.service.state.PaymentEvent;
 import com.tour.payment.service.state.PaymentStateMachine;
 import com.tour.payment.service.state.PaymentStatus;
+import com.stripe.model.checkout.Session;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -25,10 +29,12 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -36,12 +42,14 @@ import java.util.List;
 public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepository paymentRepository;
+    private final PaymentMethodRepository methodRepository;
     private final ModelMapper modelMapper;
     private final PaymentStateMachine paymentStateMachine;
     private final PaymentGatewayStrategyFactory gatewayStrategyFactory;
     private final PaymentCallbackLogRepository callbackLogRepository;
     private final OutboxEventRepository outboxEventRepository;
     private final ObjectMapper objectMapper;
+    private final StripeService stripeService;
 
     public PaymentResponse getPaymentByBookingId(Long bookingId) {
         Payment payment = paymentRepository.findByBookingId(bookingId)
@@ -55,6 +63,86 @@ public class PaymentServiceImpl implements PaymentService {
                 .orElseThrow(() -> new RuntimeException("Mã giao dịch không tồn tại!"));
 
         return modelMapper.map(payment, PaymentResponse.class);
+    }
+
+    @Override
+    @Transactional
+    public PaymentResponse initiatePayment(Long bookingId, String gateway, String bookingCodeHint, BigDecimal amountHint) {
+        String gatewayUpper = gateway.toUpperCase();
+
+        Optional<Payment> currentOpt = paymentRepository.findByBookingId(bookingId);
+        String bookingCode = bookingCodeHint;
+        BigDecimal amount = amountHint;
+        if (currentOpt.isPresent()) {
+            Payment current = currentOpt.get();
+            if (bookingCode == null || bookingCode.isBlank()) {
+                bookingCode = current.getBookingCode();
+            }
+            if (amount == null) {
+                amount = current.getAmount();
+            }
+
+            boolean sameGateway = gatewayUpper.equals(current.getGateway());
+            boolean isPending = "PENDING".equals(current.getStatus());
+
+            if (sameGateway && isPending) {
+                log.info("[Initiate] Dùng lại payment gateway={} cho bookingId={}", gatewayUpper, bookingId);
+                return modelMapper.map(current, PaymentResponse.class);
+            }
+
+            if (isPending) {
+                paymentRepository.delete(current);
+                paymentRepository.flush();
+                log.info("[Initiate] Đã xóa payment cũ gateway={} cho bookingId={}", current.getGateway(), bookingId);
+            }
+        }
+
+        // Tạo payment mới với đúng gateway
+        PaymentMethod method = methodRepository.findByNameIgnoreCase(gatewayUpper)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy payment method: " + gatewayUpper));
+
+        if (bookingCode == null || bookingCode.isBlank() || amount == null) {
+            throw new RuntimeException("Không tìm thấy thông tin booking để tạo payment mới");
+        }
+
+        Map<String, Object> message = new java.util.HashMap<>();
+        message.put("bookingId", bookingId);
+        message.put("bookingCode", bookingCode);
+        message.put("totalAmount", amount);
+
+        PaymentGatewayStrategy strategy = gatewayStrategyFactory.getStrategy(gatewayUpper);
+        Payment newPayment = strategy.createPayment(message, method);
+        newPayment.setBookingCode(bookingCode);
+        paymentRepository.save(newPayment);
+
+        log.info("[Initiate] Tạo payment mới gateway={} cho bookingId={}", gatewayUpper, bookingId);
+        return modelMapper.map(newPayment, PaymentResponse.class);
+    }
+
+    @Override
+    @Transactional
+    public PaymentResponse confirmStripeSession(String sessionId) {
+        Payment payment = paymentRepository.findByTransactionId(sessionId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy giao dịch Stripe: " + sessionId));
+
+        if (PaymentStatus.SUCCESS.name().equals(payment.getStatus())) {
+            return modelMapper.map(payment, PaymentResponse.class);
+        }
+
+        Session session = stripeService.retrieveSession(sessionId);
+        String stripeStatus = session.getPaymentStatus();
+
+        if ("paid".equals(stripeStatus)) {
+            Map<String, String> params = new HashMap<>();
+            params.put("transactionId", sessionId);
+            params.put("status", "SUCCESS");
+            params.put("idempotencyKey", "STRIPE:" + sessionId + ":confirm");
+            processCallback("STRIPE", params);
+        } else if ("unpaid".equals(stripeStatus)) {
+            log.info("[Stripe Confirm] Session {} chưa thanh toán", sessionId);
+        }
+
+        return getPaymentByTransactionId(sessionId);
     }
 
     @Override
@@ -84,6 +172,15 @@ public class PaymentServiceImpl implements PaymentService {
                 .orElseThrow(() -> new RuntimeException("Giao dịch không tồn tại"));
 
         PaymentStatus currentStatus = resolveStatus(payment.getStatus());
+        if (currentStatus == PaymentStatus.SUCCESS && "SUCCESS".equalsIgnoreCase(callbackData.getStatus())) {
+            log.info("Payment {} đã SUCCESS, bỏ qua callback trùng", callbackData.getTransactionId());
+            return;
+        }
+        if ((currentStatus == PaymentStatus.FAILED || currentStatus == PaymentStatus.CANCELED)
+                && "FAILED".equalsIgnoreCase(callbackData.getStatus())) {
+            log.info("Payment {} đã ở trạng thái kết thúc, bỏ qua callback trùng", callbackData.getTransactionId());
+            return;
+        }
         PaymentEvent event = resolveEvent(callbackData.getStatus());
         PaymentStatus nextStatus = paymentStateMachine.transition(currentStatus, event);
         payment.setStatus(nextStatus.name());
