@@ -25,7 +25,7 @@ public class Booking {
     @Column(unique = true, length = 30)
     private String bookingCode;
 
-    @Column(nullable = false)
+    @Column(name = "user_id", nullable = true)
     private Long userId; // ID từ Identity Service
 
     @Column(nullable = false)
