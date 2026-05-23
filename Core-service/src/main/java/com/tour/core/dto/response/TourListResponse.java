@@ -50,4 +50,6 @@ public class TourListResponse implements Serializable {
     private BigDecimal rating;
 
     private Integer reviewCount;
+
+    private String transportationType;
 }
