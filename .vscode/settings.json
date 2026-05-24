@@ -2,5 +2,14 @@
     "python.defaultInterpreterPath": "${workspaceFolder}/Ai-service/venv/Scripts/python.exe",
     "python.analysis.extraPaths": [
         "${workspaceFolder}/Ai-service"
-    ]
+    ],
+    "yaml.validate": false,
+    "yaml.schemas": {
+        "": "**/*.yml"
+    },
+    "redhat.telemetry.enabled": false,
+    "[yaml]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": false
+    }
 }

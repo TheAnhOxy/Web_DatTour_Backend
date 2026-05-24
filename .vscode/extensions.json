@@ -1,0 +1,10 @@
+{
+    "recommendations": [
+        "ms-python.python",
+        "ms-vscode.extension-pack-for-java"
+    ],
+    "unwantedRecommendations": [
+        "redhat.vscode-yaml",
+        "ms-kubernetes-tools.vscode-kubernetes-tools"
+    ]
+}

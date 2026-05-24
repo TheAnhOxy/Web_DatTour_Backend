@@ -51,14 +51,14 @@ public class Booking {
     @Column(columnDefinition = "jsonb")
     private Map<String, Object> priceSnapshot;
 
-    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<BookingNote> bookingNotes;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private Map<String, Object> promotionSnapshot;
 
-    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Passenger> passengers;
 
     @OneToOne(mappedBy = "booking", cascade = CascadeType.ALL)

@@ -1,10 +1,11 @@
 package com.tour.booking.controller;
 
 
+import com.tour.booking.dto.PassengerDTO;
 import com.tour.booking.dto.request.BookingRequest;
 import com.tour.booking.dto.request.CancelBookingRequest;
-import com.tour.booking.dto.response.ApiResponse;
-import com.tour.booking.dto.response.BookingResponse;
+import com.tour.booking.dto.request.BatchBookingRequest;
+import com.tour.booking.dto.response.*;
 import com.tour.booking.service.BookingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -12,13 +13,16 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
-@RequestMapping("/bookings")
+@RequestMapping("/api/v1/bookings")
 @RequiredArgsConstructor
 public class BookingController {
 
     private final BookingService bookingService;
+
+    // ===== POST ENDPOINTS =====
 
     @PostMapping("/create")
     public ApiResponse createBooking(@RequestBody BookingRequest request) {
@@ -40,16 +44,173 @@ public class BookingController {
                 .build();
     }
 
-    @GetMapping("/{bookingCode}")
-    public ApiResponse getByCode(@PathVariable String bookingCode) {
-        BookingResponse response = bookingService.getBookingByCode(bookingCode);
+    @PostMapping("/batch")
+    public ApiResponse getBookingsByIds(
+            @RequestBody BatchBookingRequest request) {
+        
+        Map<Long, BookingDetailResponse> result = 
+                bookingService.getBookingsByIds(request.getBookingIds());
+        
+        return ApiResponse.builder()
+                .status(200)
+                .message("Lấy danh sách đơn hàng thành công")
+                .data(result)
+                .build();
+    }
 
+    // ===== GET ENDPOINTS =====
+
+    /**
+     * GET /api/v1/bookings/{bookingCode}
+     * Get booking details by booking code
+     */
+    @GetMapping("/{bookingCode}")
+    public ApiResponse getByCode(
+            @PathVariable String bookingCode) {
+        
+        BookingDetailResponse response = bookingService.getBookingByCode(bookingCode);
+        
         return ApiResponse.builder()
                 .status(200)
                 .message("Lấy chi tiết đơn hàng thành công")
                 .data(response)
                 .build();
     }
+
+    /**
+     * GET /api/v1/bookings/id/{bookingId}
+     * Get booking details by booking ID
+     */
+    @GetMapping("/id/{bookingId}")
+    public ApiResponse getBookingById(
+            @PathVariable Long bookingId) {
+        
+        BookingDetailResponse response = bookingService.getBookingById(bookingId);
+        
+        return ApiResponse.builder()
+                .status(200)
+                .message("Lấy chi tiết đơn hàng thành công")
+                .data(response)
+                .build();
+    }
+
+    /**
+     * GET /api/v1/bookings/user/{userId}
+     * Get all bookings for a user with optional filtering
+     * Query params: status, page, limit
+     */
+    @GetMapping("/user/{userId}")
+    public ApiResponse getByUserId(
+            @PathVariable Long userId,
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "10") Integer limit) {
+        
+        PaginatedResponse<BookingResponse> response = 
+                bookingService.getBookingsByUserId(userId, status, page, limit);
+        
+        return ApiResponse.builder()
+                .status(200)
+                .message("Lấy danh sách đơn hàng thành công")
+                .data(response)
+                .build();
+    }
+
+    /**
+     * GET /api/v1/bookings
+     * Get all bookings (admin endpoint) with optional filtering
+     * Query params: status, paymentMethod, page, limit
+     */
+    @GetMapping
+    public ApiResponse getAll(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String paymentMethod,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "10") Integer limit) {
+        
+        PaginatedResponse<BookingResponse> response = 
+                bookingService.getAllBookings(status, paymentMethod, page, limit);
+        
+        return ApiResponse.builder()
+                .status(200)
+                .message("Lấy danh sách đơn hàng thành công")
+                .data(response)
+                .build();
+    }
+
+    /**
+     * GET /api/v1/bookings/{bookingCode}/passengers
+     * Get all passengers for a booking
+     */
+    @GetMapping("/{bookingCode}/passengers")
+    public ApiResponse getPassengers(
+            @PathVariable String bookingCode) {
+        
+        List<PassengerDTO> passengers = 
+                bookingService.getPassengersByBookingCode(bookingCode);
+        
+        return ApiResponse.builder()
+                .status(200)
+                .message("Lấy danh sách hành khách thành công")
+                .data(passengers)
+                .build();
+    }
+
+    /**
+     * GET /api/v1/bookings/{bookingCode}/notes
+     * Get all notes for a booking
+     */
+    @GetMapping("/{bookingCode}/notes")
+    public ApiResponse getNotes(
+            @PathVariable String bookingCode) {
+        
+        List<BookingNoteDTO> notes = 
+                bookingService.getBookingNotesByBookingCode(bookingCode);
+        
+        return ApiResponse.builder()
+                .status(200)
+                .message("Lấy ghi chú đơn hàng thành công")
+                .data(notes)
+                .build();
+    }
+
+    /**
+     * GET /api/v1/bookings/{bookingCode}/cancellation
+     * Get cancellation info for a booking (if exists)
+     */
+    @GetMapping("/{bookingCode}/cancellation")
+    public ApiResponse getCancellation(
+            @PathVariable String bookingCode) {
+        
+        CancellationDTO cancellation = 
+                bookingService.getCancellationByBookingCode(bookingCode);
+        
+        return ApiResponse.builder()
+                .status(200)
+                .message("Lấy thông tin hủy đơn thành công")
+                .data(cancellation)
+                .build();
+    }
+
+    /**
+     * GET /api/v1/bookings/user/{userId}/summary
+     * Get booking statistics summary for a user
+     */
+    @GetMapping("/user/{userId}/summary")
+    public ApiResponse getUserSummary(
+            @PathVariable Long userId) {
+        
+        BookingSummaryDTO summary = 
+                bookingService.getUserBookingSummary(userId);
+        
+        return ApiResponse.builder()
+                .status(200)
+                .message("Lấy tóm tắt đơn hàng thành công")
+                .data(summary)
+                .build();
+    }
+
+    // ===== LEGACY ENDPOINTS (DEPRECATED - kept for backward compatibility) =====
 
     @GetMapping("/by-users")
     public ApiResponse getBookingsByUserIds(@RequestParam List<Long> userIds) {
@@ -59,45 +220,11 @@ public class BookingController {
                 .build();
     }
 
-    @GetMapping("/user/{userId}")
-    public ApiResponse getByUserId(@PathVariable Long userId) {
-        return ApiResponse.builder()
-                .status(200)
-                .message("Lấy danh sách đơn hàng thành công")
-                .data(bookingService.getBookingsByUserId(userId))
-                .build();
-    }
-
-    // Lấy tất cả booking hệ thống (Cho Admin)
-    @GetMapping("/all")
-    public ApiResponse getAll() {
-        return ApiResponse.builder()
-                .status(200)
-                .message("Lấy toàn bộ danh sách đơn hàng thành công")
-                .data(bookingService.getAllBookings())
-                .build();
-    }
-
     @GetMapping("/by-ids")
-    public ApiResponse getBookingsByIds(@RequestParam List<Long> ids) {
+    public ApiResponse getBookingsByIdsMapped(@RequestParam List<Long> ids) {
         return ApiResponse.builder()
                 .status(200)
-                .data(bookingService.getBookingsByIds(ids))
+                .data(bookingService.getBookingsByIdsMapped(ids))
                 .build();
     }
-
-    @GetMapping
-    public String getHello(){
-        return "hello bookings";
-    }
-
-//    @PostMapping
-//    public ResponseEntity<ApiResponse> create(@RequestBody FoodRequest request) {
-//        return ResponseEntity.status(201).body(ApiResponse.builder()
-//                .status(201)
-//                .message("Thêm món thành công")
-//                .data(foodService.createFood(request))
-//                .build());
-//    }
-
 }

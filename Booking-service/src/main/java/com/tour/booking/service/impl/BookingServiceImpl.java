@@ -4,28 +4,34 @@ import com.tour.booking.client.CoreClient;
 import com.tour.booking.dto.PassengerDTO;
 import com.tour.booking.dto.request.BookingRequest;
 import com.tour.booking.dto.request.CancelBookingRequest;
-import com.tour.booking.dto.response.ApiResponse;
-import com.tour.booking.dto.response.BookingResponse;
+import com.tour.booking.dto.response.*;
 import com.tour.booking.entity.Booking;
+import com.tour.booking.entity.BookingNote;
 import com.tour.booking.entity.Cancellation;
 import com.tour.booking.entity.Passenger;
 import com.tour.booking.exception.BusinessException;
+import com.tour.booking.exception.ResourceNotFoundException;
+import com.tour.booking.repository.BookingNoteRepository;
 import com.tour.booking.repository.BookingRepository;
+import com.tour.booking.repository.CancellationRepository;
+import com.tour.booking.repository.PassengerRepository;
 import com.tour.booking.service.BookingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RBucket;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.KafkaException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -35,6 +41,9 @@ import java.util.stream.Collectors;
 public class BookingServiceImpl implements BookingService {
 
     private final BookingRepository bookingRepository;
+    private final PassengerRepository passengerRepository;
+    private final BookingNoteRepository bookingNoteRepository;
+    private final CancellationRepository cancellationRepository;
     private final RedissonClient redissonClient;
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final CoreClient coreClient;
@@ -265,102 +274,330 @@ public class BookingServiceImpl implements BookingService {
         }
     }
 
+    // ===== NEW GET API METHODS =====
+
     @Override
-    public BookingResponse getBookingByCode(String bookingCode) {
-        Booking booking = bookingRepository.findByBookingCode(bookingCode)
-                .orElseThrow(() -> new BusinessException("Không tìm thấy đơn hàng: " + bookingCode));
-
-        //  Lấy lại priceConfig từ snapshot đã lưu trong DB
-        Map<String, Object> priceConfig = (Map<String, Object>) booking.getPriceSnapshot().get("priceConfig");
-
-        return BookingResponse.builder()
-                .bookingId(booking.getId())
-                .bookingCode(booking.getBookingCode())
-                .status(booking.getStatus())
-                .totalAmount(booking.getTotalAmount())
-                .createdAt(booking.getCreatedAt())
-                .paymentMethod(booking.getPaymentMethod())
-                .paymentDueAt(booking.getPaymentDueAt())
-                .tourTitle((String) booking.getPriceSnapshot().get("tourTitle"))
-                .startDate(String.valueOf(booking.getPriceSnapshot().get("startDate")))
-                .priceDetail(priceConfig)
-                .message("Lấy thông tin đơn hàng thành công")
-                .build();
+    @Transactional(readOnly = true)
+    public BookingDetailResponse getBookingByCode(String bookingCode) {
+        log.info("Getting booking by code: {}", bookingCode);
+        
+        Booking booking = bookingRepository.findByBookingCodeFetchAll(bookingCode)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Không tìm thấy đơn hàng với mã: " + bookingCode));
+        
+        return mapToDetailResponse(booking);
     }
 
     @Override
-    public List<BookingResponse> getBookingsByUserId(Long userId) {
-        List<Booking> bookings = bookingRepository.findByUserIdWithPassengers(userId);
-        return bookings.stream()
-                .map(this::mapToBookingResponse)
-                .toList();
+    @Transactional(readOnly = true)
+    public BookingDetailResponse getBookingById(Long bookingId) {
+        log.info("Getting booking by id: {}", bookingId);
+        
+        Booking booking = bookingRepository.findByIdFetchAll(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Không tìm thấy đơn hàng với ID: " + bookingId));
+        
+        return mapToDetailResponse(booking);
     }
 
     @Override
-    public List<BookingResponse> getAllBookings() {
-        List<Booking> bookings = bookingRepository.findAllWithPassengers();
-        return bookings.stream()
-                .map(this::mapToBookingResponse)
-                .toList();
-    }
-
-    // Hàm Helper để map dữ liệu sang DTO cho gọn code
-    private BookingResponse mapToBookingResponse(Booking booking) {
-        Map<String, Object> priceSnapshot = booking.getPriceSnapshot();
-        Map<String, Object> priceConfig = (Map<String, Object>) priceSnapshot.get("priceConfig");
-        List<PassengerDTO> passengerDTOs = booking.getPassengers().stream()
-                .map(p -> PassengerDTO.builder()
-                        .fullName(p.getFullName())
-                        .ageGroup(p.getAgeGroup())
-                        .dob(p.getDob())
-                        .gender(p.getGender())
-                        .idCardNumber(p.getIdCardNumber())
-                        .build())
-                .toList();
-        return BookingResponse.builder()
-                .bookingId(booking.getId())
-                .bookingCode(booking.getBookingCode())
-                .status(booking.getStatus())
-                .totalAmount(booking.getTotalAmount())
-                .createdAt(booking.getCreatedAt())
-                .paymentMethod(booking.getPaymentMethod())
-                .paymentDueAt(booking.getPaymentDueAt())
-                .passengers(passengerDTOs)
-
-                // Lấy từ Snapshot (Dữ liệu quá khứ)
-                .tourTitle(priceSnapshot != null ? (String) priceSnapshot.get("tourTitle") : "N/A")
-                .startDate(priceSnapshot != null ? String.valueOf(priceSnapshot.get("startDate")) : "")
-                .cityName(priceSnapshot != null ? (String) priceSnapshot.get("cityName") : "")
-                .pickupName(priceSnapshot != null ? (String) priceSnapshot.get("pickupName") : "")
-                .pickupAddress(priceSnapshot != null ? (String) priceSnapshot.get("pickupAddress") : "")
-
-                .priceDetail(priceSnapshot != null ? (Map<String, Object>) priceSnapshot.get("priceConfig") : null)
-                .userId(booking.getUserId())
+    @Transactional(readOnly = true)
+    public PaginatedResponse<BookingResponse> getBookingsByUserId(
+            Long userId, 
+            String status, 
+            Integer page, 
+            Integer limit) {
+        
+        log.info("Getting bookings for user: {} with status: {}", userId, status);
+        
+        List<Booking> allBookings;
+        Long total;
+        
+        if (status != null && !status.isEmpty()) {
+            // Get all bookings with status filter
+            List<Booking> statusFiltered = bookingRepository.findByUserIdAndStatusWithPassengers(
+                    userId, status, Pageable.unpaged());
+            allBookings = statusFiltered;
+            total = bookingRepository.countByUserIdAndStatus(userId, status);
+        } else {
+            allBookings = bookingRepository.findByUserIdWithPassengers(userId);
+            total = bookingRepository.countByUserId(userId);
+        }
+        
+        // Apply pagination manually
+        List<BookingResponse> responses = allBookings.stream()
+                .skip((long) page * limit)
+                .limit(limit)
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+        
+        int totalPages = (int) Math.ceil((double) total / limit);
+        
+        return PaginatedResponse.<BookingResponse>builder()
+                .data(responses)
+                .totalElements(total.intValue())
+                .currentPage(page)
+                .pageSize(limit)
+                .totalPages(totalPages)
+                .hasNext((page + 1) * limit < total)
                 .build();
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Map<Long, List<BookingResponse>> getBookingsByUserIds(List<Long> userIds) {
-        List<Booking> bookings = bookingRepository.findAllByUserIdsWithPassengers(userIds);
+    public PaginatedResponse<BookingResponse> getAllBookings(
+            String status, 
+            String paymentMethod, 
+            Integer page, 
+            Integer limit) {
+        
+        log.info("Getting all bookings with status: {}, paymentMethod: {}", status, paymentMethod);
+        
+        Pageable pageable = PageRequest.of(page, limit, 
+                Sort.by("createdAt").descending());
+        
+        // Build specification for dynamic filtering
+        Specification<Booking> spec = Specification.where(null);
+        
+        if (status != null && !status.isEmpty()) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status));
+        }
+        
+        if (paymentMethod != null && !paymentMethod.isEmpty()) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("paymentMethod"), paymentMethod));
+        }
+        
+        var pageResult = bookingRepository.findAll(spec, pageable);
+        
+        List<BookingResponse> responses = pageResult.getContent().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+        
+        return PaginatedResponse.<BookingResponse>builder()
+                .data(responses)
+                .totalElements((int) pageResult.getTotalElements())
+                .currentPage(page)
+                .pageSize(limit)
+                .totalPages(pageResult.getTotalPages())
+                .hasNext(pageResult.hasNext())
+                .build();
+    }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<PassengerDTO> getPassengersByBookingCode(String bookingCode) {
+        log.info("Getting passengers for booking: {}", bookingCode);
+        
+        List<Passenger> passengers = passengerRepository.findByBookingCode(bookingCode);
+        
+        if (passengers.isEmpty()) {
+            throw new ResourceNotFoundException(
+                    "Không tìm thấy hành khách cho đơn hàng: " + bookingCode);
+        }
+        
+        return passengers.stream()
+                .map(this::mapToPassengerDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<BookingNoteDTO> getBookingNotesByBookingCode(String bookingCode) {
+        log.info("Getting notes for booking: {}", bookingCode);
+        
+        List<BookingNote> notes = bookingNoteRepository.findByBookingCode(bookingCode);
+        
+        return notes.stream()
+                .map(this::mapToBookingNoteDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CancellationDTO getCancellationByBookingCode(String bookingCode) {
+        log.info("Getting cancellation info for booking: {}", bookingCode);
+        
+        var cancellation = cancellationRepository.findByBookingCode(bookingCode);
+        
+        if (cancellation.isEmpty()) {
+            return null; // No cancellation
+        }
+        
+        return mapToCancellationDTO(cancellation.get());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Long, BookingDetailResponse> getBookingsByIds(List<Long> bookingIds) {
+        log.info("Getting bookings by ids: {}", bookingIds);
+        
+        List<Booking> bookings = bookingRepository.findByIdInFetchAll(bookingIds);
+        
         return bookings.stream()
-                .map(this::mapToBookingResponse)
-                .collect(Collectors.groupingBy(
-                        res -> bookings.stream()
-                                .filter(b -> b.getBookingCode().equals(res.getBookingCode()))
-                                .findFirst().get().getUserId()
+                .collect(Collectors.toMap(
+                        Booking::getId,
+                        this::mapToDetailResponse
                 ));
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public BookingSummaryDTO getUserBookingSummary(Long userId) {
+        log.info("Getting booking summary for user: {}", userId);
+        
+        List<Booking> userBookings = bookingRepository
+                .findByUserIdOrderByCreatedAtDesc(userId);
+        
+        if (userBookings.isEmpty()) {
+            return BookingSummaryDTO.builder()
+                    .totalBookings(0)
+                    .totalAmount(BigDecimal.ZERO)
+                    .totalPaidAmount(BigDecimal.ZERO)
+                    .byStatus(new HashMap<>())
+                    .build();
+        }
+        
+        BigDecimal totalAmount = userBookings.stream()
+                .map(Booking::getTotalAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        BigDecimal totalPaidAmount = userBookings.stream()
+                .map(Booking::getPaidAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        Map<String, Integer> byStatus = userBookings.stream()
+                .collect(Collectors.groupingBy(
+                        Booking::getStatus,
+                        Collectors.summingInt(b -> 1)
+                ));
+        
+        return BookingSummaryDTO.builder()
+                .totalBookings(userBookings.size())
+                .totalAmount(totalAmount)
+                .totalPaidAmount(totalPaidAmount)
+                .byStatus(byStatus)
+                .build();
+    }
+
+    // ===== MAPPING METHODS =====
+
+    private BookingDetailResponse mapToDetailResponse(Booking booking) {
+        return BookingDetailResponse.builder()
+                .bookingId(booking.getId())
+                .bookingCode(booking.getBookingCode())
+                .userId(booking.getUserId())
+                .departureId(booking.getDepartureId())
+                .totalAmount(booking.getTotalAmount())
+                .paidAmount(booking.getPaidAmount())
+                .status(booking.getStatus())
+                .paymentMethod(booking.getPaymentMethod())
+                .paymentDueAt(booking.getPaymentDueAt())
+                .contactName(booking.getContactName())
+                .contactEmail(booking.getContactEmail())
+                .contactPhone(booking.getContactPhone())
+                .priceSnapshot(booking.getPriceSnapshot())
+                .promotionSnapshot(booking.getPromotionSnapshot())
+                .createdAt(booking.getCreatedAt())
+                .version(booking.getVersion())
+                .passengers(mapPassengers(booking.getPassengers()))
+                .bookingNotes(mapBookingNotes(booking.getBookingNotes()))
+                .cancellation(mapCancellation(booking.getCancellation()))
+                .build();
+    }
+
+    private BookingResponse mapToResponse(Booking booking) {
+        return BookingResponse.builder()
+                .bookingId(booking.getId())
+                .bookingCode(booking.getBookingCode())
+                .status(booking.getStatus())
+                .totalAmount(booking.getTotalAmount())
+                .createdAt(booking.getCreatedAt())
+                .paymentMethod(booking.getPaymentMethod())
+                .paymentDueAt(booking.getPaymentDueAt())
+                .userId(booking.getUserId())
+                .passengers(mapPassengers(booking.getPassengers()))
+                .build();
+    }
+
+    private List<PassengerDTO> mapPassengers(List<Passenger> passengers) {
+        if (passengers == null || passengers.isEmpty()) {
+            return new ArrayList<>();
+        }
+        
+        return passengers.stream()
+                .map(this::mapToPassengerDTO)
+                .collect(Collectors.toList());
+    }
+
+    private PassengerDTO mapToPassengerDTO(Passenger p) {
+        return PassengerDTO.builder()
+                .fullName(p.getFullName())
+                .dob(p.getDob())
+                .gender(p.getGender())
+                .ageGroup(p.getAgeGroup())
+                .idCardNumber(p.getIdCardNumber())
+                .build();
+    }
+
+    private List<BookingNoteDTO> mapBookingNotes(List<BookingNote> notes) {
+        if (notes == null || notes.isEmpty()) {
+            return new ArrayList<>();
+        }
+        
+        return notes.stream()
+                .map(this::mapToBookingNoteDTO)
+                .collect(Collectors.toList());
+    }
+
+    private BookingNoteDTO mapToBookingNoteDTO(BookingNote note) {
+        return BookingNoteDTO.builder()
+                .noteId(note.getId())
+                .content(note.getContent())
+                .createdAt(note.getCreatedAt())
+                .build();
+    }
+
+    private CancellationDTO mapToCancellationDTO(Cancellation c) {
+        if (c == null) return null;
+        
+        return CancellationDTO.builder()
+                .cancellationId(c.getId())
+                .bookingId(c.getBooking() != null ? c.getBooking().getId() : null)
+                .reason(c.getReason())
+                .refundAmount(c.getRefundAmount())
+                .cancelledAt(c.getCancelledAt())
+                .build();
+    }
+
+    private CancellationDTO mapCancellation(Cancellation cancellation) {
+        return mapToCancellationDTO(cancellation);
+    }
+
+    // ===== HELPER METHODS (for legacy endpoints) =====
 
     @Override
     @Transactional(readOnly = true)
-    public Map<Long, BookingResponse> getBookingsByIds(List<Long> ids) {
+    public List<BookingResponse> getBookingsByUserIds(List<Long> userIds) {
+        log.info("Getting bookings for user ids: {}", userIds);
+        
+        List<Booking> bookings = bookingRepository.findAllByUserIdsWithPassengers(userIds);
+        
+        return bookings.stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Long, BookingResponse> getBookingsByIdsMapped(List<Long> ids) {
+        log.info("Getting bookings by ids (mapped): {}", ids);
+        
         List<Booking> bookings = bookingRepository.findAllByIdsWithPassengers(ids);
-        return bookings.stream().collect(Collectors.toMap(
-                Booking::getId,
-                this::mapToBookingResponse
-        ));
+        
+        return bookings.stream()
+                .collect(Collectors.toMap(
+                        Booking::getId,
+                        this::mapToResponse
+                ));
     }
 }
