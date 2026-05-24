@@ -111,6 +111,15 @@ services:
   # MICROSERVICES
   # =====================
 
+  discovery-service:
+    build: ./discovery-service
+    image: be-discovery-service-custom
+    container_name: discovery-service
+    ports:
+      - "8761:8761"
+    networks:
+      - gotour-network
+
   api-gateway:
     build: ./api-gateway
     container_name: api-gateway
