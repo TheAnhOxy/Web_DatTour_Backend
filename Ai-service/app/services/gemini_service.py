@@ -28,14 +28,15 @@ class GeminiService:
         - budget: Số tiền (triệu đồng) mà user sẵn sàng chi tiêu. Ví dụ: "5 triệu", "7tr", "10 triệu". KHÔNG bao gồm: số tháng (tháng 11), số ngày đi (3 ngày), mã booking (BK123, BK456).
         - days: Số ngày đi tour (2, 3, 4, 5). KHÔNG bao gồm: tháng, mã booking, ngân sách.
         - travel_group: Nhóm đi (couple, family, friends, solo). Tìm kiếm từ khóa như: cặp đôi, người yêu, gia đình, trẻ em, nhóm bạn, một mình.
+        - booking_id: Mã đặt tour (thường bắt đầu bằng BK, ví dụ: BK123, BK456).
         
         Quy tắc bổ sung:
         - Nếu không tìm thấy thông tin, set giá trị = null.
         - KHÔNG bịa ra thông tin không có trong tin nhắn.
-        - Prioritize: destination > budget > days > travel_group.
+        - Prioritize: destination > budget > days > travel_group > booking_id.
         
         Trả về JSON:
-        {{"destination": <string|null>, "budget": <float|null>, "days": <int|null>, "travel_group": <string|null>}}
+        {{"destination": <string|null>, "budget": <float|null>, "days": <int|null>, "travel_group": <string|null>, "booking_id": <string|null>}}
         """
         if not self.client:
              raise ValueError("API Key is missing.")
@@ -53,9 +54,9 @@ class GeminiService:
             return ExtractedEntities(**json.loads(response.text))
         except Exception as e:
             print(f"Error extracting entities: {e}")
-            return ExtractedEntities(destination=None, budget=None, days=None, travel_group=None)
+            return ExtractedEntities(destination=None, budget=None, days=None, travel_group=None, booking_id=None)
 
-    async def chat_with_travel_assistant(self, user_message: str, chat_history: List[ChatMessage], retrieved_tours_context: str, extracted_entities: ExtractedEntities, tool_results: str = "") -> ChatResponse:
+    async def chat_with_travel_assistant(self, user_message: str, chat_history: List[ChatMessage], retrieved_tours_context: str, extracted_entities: ExtractedEntities, tool_results: str = "", mode_prompt_adjustment: str = "", tone: str = "", observed_intent: str = "", observed_confidence: float = 0.0) -> ChatResponse:
         if self._use_mock_backend():
             return mock_travel_assistant.build_response(
                 user_message=user_message,
@@ -63,6 +64,8 @@ class GeminiService:
                 retrieved_tours_context=retrieved_tours_context,
                 extracted_entities=extracted_entities,
                 tool_results=tool_results,
+                observed_intent=observed_intent,
+                observed_confidence=observed_confidence,
             )
 
         from app.services.tool_registry import tool_registry
@@ -72,53 +75,62 @@ class GeminiService:
         for func in tool_registry.get_registered_functions():
             tools_info += f"- {func.__name__}: {func.__doc__}\n"
 
+        system_prompt = """
+    You are a premium AI travel assistant.
+
+    Response style MUST be:
+    - concise
+    - warm and emotionally natural
+    - mobile-friendly and easy to scan
+
+    STRICT RULES:
+    - Maximum 2 short paragraphs before any bullet list
+    - Maximum 3 suggested tours in `suggested_tours`
+    - Maximum 1 follow-up question in `suggested_questions`
+    - Never dump large text or repeat user input unnecessarily
+    - Avoid robotic templates; sound like a friendly travel consultant
+    - Use subtle emoji where appropriate (light and contextual)
+
+    RESPONSE STRUCTURE (MANDATORY):
+    1) Emotional acknowledgment (1 short sentence)
+    2) One-line key recommendation insight (1 short sentence)
+    3) Up to 3 concise tour bullets (each 1 short line: title — price — days)
+    4) One lightweight CTA question (max 1)
+
+    OUTPUT FORMAT: Return EXACTLY valid JSON matching the `ChatResponse` schema. Obey these constraints strictly: `suggested_tours` max 3, `suggested_questions` max 1, `reply` must be short (<= 3 short sentences), include `opinion` (1-2 sentence recommendation) and `confidence` (float 0.0-1.0). If you need external data (booking status, weather), add a `tool_calls` entry and LEAVE `reply` empty so the system can call the tool.
+
+    If you do NOT know something, do NOT hallucinate — respond that data is unavailable and/or request the user to provide needed info (e.g., booking id).
+    """
+
         prompt = f"""
-        Bạn là "GoTour Agent", một trợ lý du lịch AI thông minh, vui vẻ, chuyên nghiệp của GoTourNow.
-        
-        Danh sách các công cụ (Tools) bạn có thể sử dụng:
-        {tools_info}
-        
-        Kết quả từ công cụ (nếu có):
-        {tool_results}
+    {system_prompt}
 
-        Context (Các Tour trong hệ thống):
-        ---
-        {retrieved_tours_context}
-        ---
+    Conversation Mode Adjustment:
+    {mode_prompt_adjustment}
 
-        Lịch sử trò chuyện (sử dụng để hiểu ngữ cảnh):
-        {[f"User: {{msg.content}}" if msg.role == "user" else f"Assistant: {{msg.content}}" for msg in chat_history[-3:]]}
+    Desired Tone: {tone}
 
-        Câu hỏi hiện tại của khách hàng: "{user_message}"
+    Available Tools:
+    {tools_info}
 
-        Yêu cầu OUTPUT (Bắt buộc):
-        1. KHÔNG BAO GIỜ bịa ra (hallucinate) Tour không có trong Context.
-        2. Cảm xúc (sentiment) phải là: "positive", "negative", hoặc "neutral". Nếu user dùng từ tiêu cực (tệ, chán, thất vọng, lừa), set = "negative".
-        3. Intent phải là một trong: "tour_search", "tour_comparison", "booking_support", "complaint", "greeting", "recommendation", "other".
-        4. Nếu sentiment = "negative" HOẶC intent = "complaint", bắt buộc set requires_human_support = true.
-        5. Nếu user hỏi về thời tiết, cần tool `get_current_weather`.
-        6. Nếu user muốn hủy/kiểm tra booking (có mã BK), gọi tool tương ứng.
-        
-        Hướng dẫn Tool calling:
-        - Nếu cần gọi Tool, hãy để trống phần `reply`, đổ dữ liệu vào `tool_calls`.
-           CHÚ Ý: Bắt buộc phải điền ĐẦY ĐỦ tham số vào object `arguments`.
-           Ví dụ: {{"tool_name": "get_current_weather", "arguments": {{"location": "Đà Lạt"}}, "status": "pending"}}
-           Ví dụ 2: {{"tool_name": "check_booking_status", "arguments": {{"booking_id": "BK123"}}, "status": "pending"}}
-        - Nếu đã có `tool_results` (kết quả từ tool), sử dụng để tạo câu trả lời trong `reply`.
-        
-        Output JSON đầy đủ:
-        {{
-            "reply": "Câu trả lời tự nhiên cho user, dựa trên context + tool_results",
-            "intent": "tour_search" | "tour_comparison" | "booking_support" | "complaint" | "greeting" | "recommendation" | "other",
-            "sentiment": "positive" | "neutral" | "negative",
-            "suggested_tours": [<danh sách 3-5 tour phù hợp>],
-            "suggested_questions": [<3 câu hỏi gợi ý tiếp theo>],
-            "extracted_entities": {extracted_entities.model_dump_json()},
-            "tool_calls": [<danh sách tool pending, nếu có>],
-            "requires_human_support": <true|false>,
-            "metadata": {{"processing_time_ms": 100, "llm_used": "gemini-2.5-flash"}}
-        }}
-        """
+    Tool results (if any):
+    {tool_results}
+
+    Context (Tours):
+    ---
+    {retrieved_tours_context}
+    ---
+
+    Chat History (last 3):
+    {[f"User: {msg.content}" if msg.role=="user" else f"Assistant: {msg.content}" for msg in chat_history[-3:]]}
+
+    User Message: "{user_message}"
+
+    Return only valid JSON matching ChatResponse with the constraints above.
+    """
+        # Include observed intent info in prompt when available
+        if observed_intent:
+            prompt = prompt + f"\nObserved intent: {observed_intent} (confidence={observed_confidence})\n"
 
         if not self.client:
              raise ValueError("API Key is missing.")
@@ -148,7 +160,9 @@ class GeminiService:
                 extracted_entities=ExtractedEntities(destination=None, budget=None, days=None, travel_group=None),
                 tool_calls=[],
                 requires_human_support=True,
-                metadata=None
+                metadata=None,
+                opinion=None,
+                confidence=None
             )
 
 gemini_service = GeminiService()

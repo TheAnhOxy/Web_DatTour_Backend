@@ -8,7 +8,7 @@ import re
 from typing import Dict, Optional
 from enum import Enum
 from pydantic import BaseModel
-import google.generativeai as genai
+from google import genai
 from app.core.config import settings
 
 
@@ -29,6 +29,8 @@ class IntentClassificationResult(BaseModel):
     intent: IntentType
     confidence: float  # 0.0-1.0
     reasoning: str
+    matched_rules: Optional[list] = []
+    why: Optional[str] = None
 
 
 class IntentClassifier:
@@ -40,10 +42,9 @@ class IntentClassifier:
     def __init__(self):
         """Initialize Gemini client"""
         if settings.GEMINI_API_KEY:
-            genai.configure(api_key=settings.GEMINI_API_KEY)
-            self.model = genai.GenerativeModel("gemini-2.5-flash")
+            self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
         else:
-            self.model = None
+            self.client = None
     
     async def classify(self, 
                       message: str, 
@@ -53,20 +54,26 @@ class IntentClassifier:
         Classify message intent.
         
         Priority:
-        1. If negative sentiment → complaint (already detected by NegativeDetector)
-        2. Otherwise: Use Gemini if available, fallback to keyword
+        complaint -> booking_support -> comparison -> recommendation -> tour_search -> greeting -> other
         """
-        
-        # ========== EARLY RETURN: COMPLAINT IF NEGATIVE ==========
-        if has_negative_sentiment:
+
+        normalized = self._normalize_text(message)
+        negative_score = self.detect_negative_score(message)
+        if has_negative_sentiment or negative_score >= 0.75:
             return IntentClassificationResult(
                 intent=IntentType.COMPLAINT,
-                confidence=1.0,
-                reasoning="Negative sentiment detected by early pipeline"
+                confidence=1.0 if negative_score >= 0.75 else 0.9,
+                reasoning="Complaint shortcut triggered by negative patterns",
+                matched_rules=["negative_shortcut"],
+                why="matched complaint regex or high negative score"
             )
+
+        priority_result = self._classify_by_priority(normalized)
+        if priority_result is not None:
+            return priority_result
         
         # ========== TRY GEMINI CLASSIFICATION ==========
-        if self.model:
+        if self.client:
             try:
                 return await self._classify_with_gemini(message, entities)
             except Exception as e:
@@ -75,6 +82,83 @@ class IntentClassifier:
         
         # ========== FALLBACK: KEYWORD-BASED ==========
         return self._classify_with_keywords(message)
+
+    def _normalize_text(self, message: str) -> str:
+        text = message.lower().strip()
+        return re.sub(r"\s+", " ", text)
+
+    def _classify_by_priority(self, normalized_text: str) -> Optional[IntentClassificationResult]:
+        if normalized_text in {"hi", "hello", "xin chào", "chào", "alo"}:
+            return IntentClassificationResult(
+                intent=IntentType.GREETING,
+                confidence=0.98,
+                reasoning="Exact greeting match",
+                matched_rules=["greeting_exact"],
+                why="exact short greeting only"
+            )
+
+        if re.search(r"\b(bk\d+|booking|đặt cọc|thanh toán|hủy|huy|refund|hoàn tiền)\b", normalized_text):
+            return IntentClassificationResult(
+                intent=IntentType.BOOKING_SUPPORT,
+                confidence=0.9,
+                reasoning="Booking/support phrase matched",
+                matched_rules=["booking_priority"],
+                why="matched booking/support keyword"
+            )
+
+        if re.search(r"(so sánh|compare|hay hơn|nào tốt|cái nào|nên chọn cái nào|which .* better|better)", normalized_text):
+            return IntentClassificationResult(
+                intent=IntentType.COMPARISON,
+                confidence=0.88,
+                reasoning="Comparison phrase matched",
+                matched_rules=["comparison_priority"],
+                why="matched comparison phrase"
+            )
+
+        recommendation_patterns = [
+            r"đi đâu đẹp",
+            r"nên đi đâu",
+            r"tour nào hot",
+            r"muốn chill",
+            r"thích thiên nhiên",
+            r"đi biển",
+            r"du lịch nghỉ dưỡng",
+            r"nên đi",
+            r"tháng\s*\d+\s*nên đi đâu",
+            r"muốn đi",
+            r"gợi ý.*tour",
+            r"recommend",
+            r"suggest",
+        ]
+        if any(re.search(p, normalized_text) for p in recommendation_patterns):
+            return IntentClassificationResult(
+                intent=IntentType.RECOMMENDATION,
+                confidence=0.86,
+                reasoning="Matched explicit recommendation phrase",
+                matched_rules=["recommendation_phrase"],
+                why="matched explicit recommendation phrase"
+            )
+
+        if re.search(r"(budget|ngân sách|triệu|tr\b|mùa|tháng\s*\d+|gia đình|người yêu|cặp đôi|honeymoon)", normalized_text):
+            if re.search(r"(đi|tour|gợi ý|nên|phù hợp|thích|muốn)", normalized_text):
+                return IntentClassificationResult(
+                    intent=IntentType.RECOMMENDATION,
+                    confidence=0.78,
+                    reasoning="Preference/budget/season bias to recommendation",
+                    matched_rules=["recommendation_bias"],
+                    why="matched preference/budget/season context"
+                )
+
+        if any(w in normalized_text for w in ["giá", "bao nhiêu", "ngày", "nơi", "tour", "đi", "tìm", "search"]):
+            return IntentClassificationResult(
+                intent=IntentType.TOUR_SEARCH,
+                confidence=0.62,
+                reasoning="Contains tour-related keywords",
+                matched_rules=["tour_keyword"],
+                why="generic tour keywords without strong recommendation signals"
+            )
+
+        return None
     
     async def _classify_with_gemini(self, 
                                    message: str, 
@@ -113,7 +197,10 @@ Respond with ONLY valid JSON (no markdown, no code blocks):
 }}
 """
         
-        response = self.model.generate_content(prompt)
+        response = self.client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+        )
         response_text = response.text.strip()
         
         # ========== PARSE JSON RESPONSE ==========
@@ -145,7 +232,8 @@ Respond with ONLY valid JSON (no markdown, no code blocks):
         return IntentClassificationResult(
             intent=intent,
             confidence=confidence,
-            reasoning=reasoning
+            reasoning=reasoning,
+            why=reasoning
         )
     
     def _classify_with_keywords(self, message: str) -> IntentClassificationResult:
@@ -154,58 +242,88 @@ Respond with ONLY valid JSON (no markdown, no code blocks):
         IMPORTANT: This is ONLY for when Gemini fails, not primary logic!
         """
         
-        msg_lower = message.lower()
+        msg_lower = self._normalize_text(message)
+        tokens = re.findall(r"\w+", message)
         
-        # ========== KEYWORD RULES (CONSERVATIVE) ==========
-        
-        # Booking support (high confidence keywords)
-        if any(w in msg_lower for w in ["booking", "BK", "hủy", "thanh toán", 
-                                         "đặt cọc", "đơn", "hoàn tiền", "refund"]):
-            return IntentClassificationResult(
-                intent=IntentType.BOOKING_SUPPORT,
-                confidence=0.8,
-                reasoning="Contains booking-related keywords"
-            )
-        
-        # Comparison (clear signals)
-        if any(w in msg_lower for w in ["so sánh", "compare", "hay hơn", "nào tốt", 
-                                         "cái nào", "nên chọn cái nào", "hay", "better"]):
-            return IntentClassificationResult(
-                intent=IntentType.COMPARISON,
-                confidence=0.8,
-                reasoning="Contains comparison keywords"
-            )
-        
-        # Greeting (very strict)
-        if message.strip().lower() in ["xin chào", "chào", "hello", "hi", "hey"]:
-            return IntentClassificationResult(
-                intent=IntentType.GREETING,
-                confidence=0.9,
-                reasoning="Exact greeting match"
-            )
-        
-        # Tour search (medium confidence)
-        if any(w in msg_lower for w in ["giá", "bao nhiêu", "ngày", "nơi", "tour", 
-                                          "đi", "tìm", "search"]):
-            return IntentClassificationResult(
-                intent=IntentType.TOUR_SEARCH,
-                confidence=0.6,
-                reasoning="Contains tour-related keywords"
-            )
+        priority_result = self._classify_by_priority(msg_lower)
+        if priority_result is not None:
+            return priority_result
         
         # Default: casual or other
         if len(message) < 10:
             return IntentClassificationResult(
                 intent=IntentType.CASUAL_CHAT,
                 confidence=0.5,
-                reasoning="Short message, likely casual"
+                reasoning="Short message, likely casual",
+                why="short message and no priority pattern"
             )
         
         return IntentClassificationResult(
             intent=IntentType.OTHER,
             confidence=0.3,
-            reasoning="Could not classify with keywords"
+            reasoning="Could not classify with keywords",
+            matched_rules=[],
+            why="no deterministic keyword rule matched"
         )
+
+    def detect_negative_score(self, message: str) -> float:
+        """Return a negative sentiment score 0.0-1.0 based on regex and soft cues."""
+        text = self._normalize_text(message)
+        score = 0.0
+        matched = []
+
+        negative_patterns = [
+            r"phản hồi.*chậm",
+            r"khách sạn.*bẩn",
+            r"phòng.*bẩn",
+            r"tour.*tệ",
+            r"quá tệ",
+            r"rất tệ",
+            r"thất vọng",
+            r"mất đồ",
+            r"thiếu chuyên nghiệp",
+            r"không hài lòng",
+            r"không như mong đợi",
+            r"không ổn",
+            r"cần gặp quản lý",
+            r"muốn khiếu nại",
+            r"hoàn tiền",
+            r"refund",
+            r"dịch vụ quá chậm",
+            r"tour không giống mô tả",
+        ]
+        soft_negative_words = [
+            "hơi tệ",
+            "không ổn",
+            "dơ",
+            "bẩn",
+            "chậm",
+            "khó chịu",
+            "chưa tốt",
+            "không vui lắm",
+            "hơi dơ",
+            "phản hồi chậm",
+            "trải nghiệm chưa tốt",
+        ]
+
+        for pattern in negative_patterns:
+            if re.search(pattern, text):
+                score += 0.4
+                matched.append(pattern)
+
+        for word in soft_negative_words:
+            if word in text:
+                score += 0.2
+                matched.append(word)
+
+        if re.search(r"(khiếu nại|gặp quản lý|cskh|hoàn tiền|refund)", text):
+            score += 0.25
+            matched.append("escalation_request")
+
+        if len(matched) >= 2:
+            score += 0.15
+
+        return min(1.0, score)
 
 
 # ========== TESTS ==========

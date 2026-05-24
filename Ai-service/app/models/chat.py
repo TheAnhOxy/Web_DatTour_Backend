@@ -34,10 +34,11 @@ class ChatRequest(BaseModel):
     history: Optional[List[ChatMessage]] = []
 
 class ExtractedEntities(BaseModel):
-    destination: Optional[str]
-    budget: Optional[float]
-    days: Optional[int]
-    travel_group: Optional[str]
+    destination: Optional[str] = None
+    budget: Optional[float] = None
+    days: Optional[int] = None
+    travel_group: Optional[str] = None
+    booking_id: Optional[str] = None
 
 class ChatResponse(BaseModel):
     reply: str
@@ -49,3 +50,6 @@ class ChatResponse(BaseModel):
     tool_calls: List[ToolCall]
     requires_human_support: bool
     metadata: Optional[ChatMetadata]
+    # Optional opinion string and confidence score (0.0-1.0)
+    opinion: Optional[str] = None
+    confidence: Optional[float] = None

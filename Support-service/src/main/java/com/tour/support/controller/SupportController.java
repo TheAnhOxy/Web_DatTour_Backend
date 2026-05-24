@@ -1,11 +1,13 @@
 package com.tour.support.controller;
 
-
+import com.tour.support.dto.response.ApiResponse;
 import com.tour.support.entity.Review;
+import com.tour.support.entity.SupportTicket;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -20,18 +22,25 @@ public class SupportController {
         return mongoTemplate.findAll(Review.class);
     }
 
+    @PostMapping("/tickets")
+    public ApiResponse createTicket(@RequestBody SupportTicket ticket) {
+        if (ticket.getCreatedAt() == null) {
+            ticket.setCreatedAt(LocalDateTime.now());
+        }
+        ticket.setUpdatedAt(LocalDateTime.now());
+        if (ticket.getStatus() == null) {
+            ticket.setStatus("OPEN");
+        }
+        SupportTicket savedTicket = mongoTemplate.save(ticket);
+        return ApiResponse.builder()
+                .status(200)
+                .message("Tạo ticket hỗ trợ thành công")
+                .data(savedTicket)
+                .build();
+    }
+
     @GetMapping
     public String getHello(){
         return "hello sup";
     }
-
-//    @PostMapping
-//    public ResponseEntity<ApiResponse> create(@RequestBody FoodRequest request) {
-//        return ResponseEntity.status(201).body(ApiResponse.builder()
-//                .status(201)
-//                .message("Thêm món thành công")
-//                .data(foodService.createFood(request))
-//                .build());
-//    }
-
 }

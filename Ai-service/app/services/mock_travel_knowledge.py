@@ -168,6 +168,27 @@ class MockTravelAssistant:
                     return candidate
         return None
 
+    def _extract_budget_from_history(self, chat_history: List[ChatMessage]) -> Optional[float]:
+        for previous in reversed(self._last_user_messages(chat_history)):
+            budget = self._extract_budget(previous)
+            if budget:
+                return budget
+        return None
+
+    def _extract_days_from_history(self, chat_history: List[ChatMessage]) -> Optional[int]:
+        for previous in reversed(self._last_user_messages(chat_history)):
+            days = self._extract_days(previous)
+            if days:
+                return days
+        return None
+
+    def _extract_travel_group_from_history(self, chat_history: List[ChatMessage]) -> Optional[str]:
+        for previous in reversed(self._last_user_messages(chat_history)):
+            travel_group = self._extract_travel_group(previous)
+            if travel_group:
+                return travel_group
+        return None
+
     def _extract_budget(self, message: str) -> Optional[float]:
         normalized = _normalize(message)
         match = re.search(r"(\d+(?:[.,]\d+)?)\s*(tr|trieu|trieu dong|m|trd)?", normalized)
@@ -204,17 +225,15 @@ class MockTravelAssistant:
 
     def extract_entities(self, user_message: str, chat_history: List[ChatMessage]) -> ExtractedEntities:
         destination = self._extract_destination(user_message, chat_history)
-        budget = self._extract_budget(user_message)
-        days = self._extract_days(user_message)
-        travel_group = self._extract_travel_group(user_message)
+        budget = self._extract_budget(user_message) or self._extract_budget_from_history(chat_history)
+        days = self._extract_days(user_message) or self._extract_days_from_history(chat_history)
+        travel_group = self._extract_travel_group(user_message) or self._extract_travel_group_from_history(chat_history)
 
         if not destination:
-            recent_destination = None
             for previous in reversed(self._last_user_messages(chat_history)):
-                recent_destination = self._extract_destination(previous, [])
-                if recent_destination:
+                destination = self._extract_destination(previous, [])
+                if destination:
                     break
-            destination = recent_destination
 
         return ExtractedEntities(
             destination=destination,
@@ -241,10 +260,24 @@ class MockTravelAssistant:
             return "tour_comparison"
         if any(word in normalized for word in BOOKING_WORDS):
             return "booking_support"
-        if any(word in normalized for word in RECOMMEND_WORDS) and not entities.destination:
+        if any(word in normalized for word in RECOMMEND_WORDS) or any(
+            phrase in normalized
+            for phrase in [
+                "di dau dep",
+                "nen di dau",
+                "di dau cho dep",
+                "thang nao dep",
+                "mua nao dep",
+                "di luc nao",
+            ]
+        ):
             return "recommendation"
-        if entities.destination or entities.budget or entities.days or any(word in normalized for word in ["tour", "đi", "di"]):
+        if entities.destination or entities.budget or entities.days or entities.travel_group:
             return "tour_search"
+        if any(word in normalized for word in ["tour", "lịch trình", "lich trinh", "đi", "di", "gợi ý", "goi y"]):
+            return "tour_search"
+        if any(phrase in normalized for phrase in ["ban la ai", "ban co the lam gi", "tro chuyen", "chat vui"]):
+            return "casual_chat"
         return "other"
 
     def _tour_matches(self, tour: Dict[str, Any], entities: ExtractedEntities, message: str) -> int:
@@ -314,39 +347,51 @@ class MockTravelAssistant:
             thumbnail_url=tour["thumbnail_url"],
         )
 
-    def _suggestions_for(self, intent: str) -> List[SuggestedQuestion]:
-        mapping = {
-            "tour_search": [
-                "Bạn muốn đi mấy ngày?",
-                "Ngân sách dự kiến của bạn là bao nhiêu?",
-                "Bạn đi với ai: cặp đôi, gia đình hay nhóm bạn?",
-            ],
-            "tour_comparison": [
+    def _suggestions_for(self, intent: str, entities: Optional[ExtractedEntities] = None) -> List[SuggestedQuestion]:
+        if intent == "tour_search":
+            if entities and entities.destination:
+                items = [
+                    f"Bạn muốn đi {entities.destination} mấy ngày?",
+                    "Ngân sách dự kiến của bạn là bao nhiêu?",
+                    "Bạn đi với ai: cặp đôi, gia đình hay nhóm bạn?",
+                ]
+            else:
+                items = [
+                    "Bạn thích biển, núi hay city tour?",
+                    "Bạn muốn đi mấy ngày?",
+                    "Ngân sách của bạn khoảng bao nhiêu?",
+                ]
+        elif intent == "tour_comparison":
+            items = [
                 "Bạn muốn mình so sánh theo giá hay lịch trình?",
                 "Bạn ưu tiên khách sạn hay trải nghiệm?",
-            ],
-            "booking_support": [
+            ]
+        elif intent == "booking_support":
+            items = [
                 "Bạn cho mình mã booking nhé?",
                 "Bạn muốn kiểm tra, hủy hay đổi lịch?",
-            ],
-            "complaint": [
-                "Bạn muốn mình tạo ticket hỗ trợ không?",
+            ]
+        elif intent == "complaint":
+            items = [
                 "Bạn gửi mã booking để mình tra soát nhanh hơn nhé.",
-            ],
-            "recommendation": [
-                "Bạn thích biển, núi hay city tour?",
-                "Bạn muốn đi trong bao nhiêu ngày?",
-            ],
-            "greeting": [
-                "Bạn muốn mình gợi ý tour theo ngân sách không?",
-                "Bạn muốn đi đâu trong năm nay?",
-            ],
-            "other": [
-                "Bạn có muốn mình gợi ý theo ngân sách không?",
+                "Bạn muốn mình tạo ticket hỗ trợ ngay không?",
+            ]
+        elif intent == "recommendation":
+            items = [
+                "Bạn thích biển, núi hay nghỉ dưỡng nhẹ nhàng?",
+                "Bạn muốn đi vào tháng nào?",
+            ]
+        elif intent == "greeting":
+            items = [
+                "Bạn đang muốn tìm tour nghỉ dưỡng, khám phá hay đi chill cuối tuần vậy?",
+                "Bạn có budget hoặc điểm đến nào trong đầu không?",
+            ]
+        else:
+            items = [
+                "Bạn muốn mình gợi ý theo ngân sách hay số ngày?",
                 "Bạn muốn đi tour nội địa hay quốc tế?",
-            ],
-        }
-        return [SuggestedQuestion(question=item) for item in mapping.get(intent, mapping["other"])]
+            ]
+        return [SuggestedQuestion(question=item) for item in items[:3]]
 
     def _build_reply_from_tours(self, intent: str, entities: ExtractedEntities, user_message: str) -> tuple[str, List[Dict[str, Any]]]:
         tours = self.search_tours(entities, user_message)
@@ -372,6 +417,10 @@ class MockTravelAssistant:
                 f"{index}. {tour['title']} - {_format_money(tour['price'])} - {tour['duration_days']}N - {reason_text}."
             )
 
+        lead_line = "Mình chọn ra 3 phương án sát nhu cầu nhất cho bạn:"
+        if intent == "recommendation":
+            lead_line = f"Mình nghiêng về {tours[0]['location']} cho bạn vì {tours[0]['season_note'].rstrip('.')}"
+
         if intent == "tour_comparison" and len(tours) >= 2:
             first, second = tours[0], tours[1]
             reply = (
@@ -386,14 +435,14 @@ class MockTravelAssistant:
         if intent == "recommendation":
             lead = tours[0]
             reply = (
-                f"Với nhu cầu hiện tại, mình đề xuất {lead['title']} vì {lead['season_note']} "
+                f"{lead_line}.\n"
                 f"Giá {_format_money(lead['price'])}, phù hợp để bạn cân bằng giữa ngân sách và trải nghiệm.\n"
                 + "\n".join(top_lines)
             )
             return reply, tours
 
         reply = (
-            f"Mình tìm được một số tour phù hợp nhất với yêu cầu của bạn:\n"
+            f"{lead_line}\n"
             + "\n".join(top_lines)
             + "\nBạn muốn mình lọc tiếp theo giá, số ngày hay loại hình tour không?"
         )
@@ -422,6 +471,8 @@ class MockTravelAssistant:
         retrieved_tours_context: str,
         extracted_entities: ExtractedEntities,
         tool_results: str = "",
+        observed_intent: str = "",
+        observed_confidence: float = 0.0,
     ) -> ChatResponse:
         entities = self.extract_entities(user_message, chat_history)
         if extracted_entities.destination and not entities.destination:
@@ -434,6 +485,12 @@ class MockTravelAssistant:
             entities.travel_group = extracted_entities.travel_group
 
         intent = self.detect_intent(user_message, entities)
+        # If an external classifier provided a high-confidence observed_intent, trust it
+        try:
+            if observed_intent and observed_confidence and observed_confidence >= 0.7:
+                intent = observed_intent
+        except Exception:
+            pass
         sentiment = self.detect_sentiment(user_message)
         parsed_tool_results = self._parse_tool_results(tool_results)
         tool_calls: List[ToolCall] = []
@@ -492,7 +549,7 @@ class MockTravelAssistant:
                 ]
                 reply = "Mình rất tiếc vì trải nghiệm chưa tốt. Mình sẽ ghi nhận và chuyển CSKH hỗ trợ ngay."
             elif intent == "greeting":
-                reply = "Chào bạn, mình là GoTour Agent. Bạn muốn tìm tour, so sánh tour hay kiểm tra booking?"
+                reply = "Chào bạn 👋 Bạn đang muốn tìm tour nghỉ dưỡng, khám phá hay đi chill cuối tuần vậy?"
             elif intent in {"tour_search", "recommendation", "tour_comparison", "other"}:
                 reply, matched_tours = self._build_reply_from_tours(intent, entities, user_message)
                 suggested_tours = [self._tour_to_summary(tour) for tour in matched_tours]
@@ -500,7 +557,7 @@ class MockTravelAssistant:
                 if intent == "other" and not any([entities.destination, entities.budget, entities.days, entities.travel_group]):
                     reply = (
                         "Mình có thể giúp bạn tìm tour, so sánh tour, hoặc hỗ trợ booking. "
-                        "Bạn cho mình ngân sách, số ngày hoặc điểm đến để mình gợi ý chính xác hơn nhé."
+                        "Bạn cho mình ngân sách, số ngày hoặc điểm đến để mình gợi ý sát hơn nhé."
                     )
             else:
                 reply = "Mình có thể hỗ trợ bạn tìm tour, so sánh, kiểm tra booking hoặc xử lý phản hồi. Bạn muốn bắt đầu từ đâu?"
@@ -517,7 +574,7 @@ class MockTravelAssistant:
             intent=intent,
             sentiment=sentiment,
             suggested_tours=suggested_tours,
-            suggested_questions=self._suggestions_for(intent),
+            suggested_questions=self._suggestions_for(intent, entities),
             extracted_entities=entities,
             tool_calls=tool_calls,
             requires_human_support=requires_human_support,
