@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/bookings")
+@RequestMapping("/bookings")
 @RequiredArgsConstructor
 public class BookingController {
 
@@ -99,6 +99,16 @@ public class BookingController {
      * Get all bookings for a user with optional filtering
      * Query params: status, page, limit
      */
+
+    @GetMapping("/users/{userId}")
+    public ApiResponse getByUserId(@PathVariable Long userId) {
+        return ApiResponse.builder()
+                .status(200)
+                .message("Lấy danh sách đơn hàng thành công")
+                .data(bookingService.getBookingsByUserId(userId))
+                .build();
+    }
+
     @GetMapping("/user/{userId}")
     public ApiResponse getByUserId(
             @PathVariable Long userId,
@@ -135,6 +145,15 @@ public class BookingController {
                 .status(200)
                 .message("Lấy danh sách đơn hàng thành công")
                 .data(response)
+                .build();
+    }
+
+    @GetMapping("/all")
+    public ApiResponse getAll() {
+        return ApiResponse.builder()
+                .status(200)
+                .message("Lấy toàn bộ danh sách đơn hàng thành công")
+                .data(bookingService.getAllBookings())
                 .build();
     }
 

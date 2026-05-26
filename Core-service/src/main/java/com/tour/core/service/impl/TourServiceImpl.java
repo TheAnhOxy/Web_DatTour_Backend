@@ -267,8 +267,9 @@ public class TourServiceImpl implements TourService {
             d.setTour(tour);
             d.setBookedSlots(0);
             Departure saved = departureRepository.save(d);
-            redissonClient.getBucket("SLOTS_" + saved.getId()).set(saved.getMaxSlots());
-
+//            redissonClient.getBucket("SLOTS_" + saved.getId()).set(saved.getMaxSlots());
+            redissonClient.getBucket("SLOTS_" + saved.getId(), org.redisson.client.codec.StringCodec.INSTANCE)
+                    .set(String.valueOf(saved.getMaxSlots()));
             // Lưu priceConfig nếu có trong request
             if (dr.getPriceConfig() != null) {
                 try {

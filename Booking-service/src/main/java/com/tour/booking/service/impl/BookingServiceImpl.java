@@ -76,7 +76,7 @@ public class BookingServiceImpl implements BookingService {
 
             // 3. Kiểm tra Slot (Redis)
             String slotKey = "SLOTS_" + request.getDepartureId();
-            RBucket<Object> bucket = redissonClient.getBucket(slotKey);
+            RBucket<String> bucket = redissonClient.getBucket(slotKey, org.redisson.client.codec.StringCodec.INSTANCE);
             Object bucketValue = bucket.get();
             Integer availableSlots;
 
@@ -84,7 +84,9 @@ public class BookingServiceImpl implements BookingService {
                 int max = Integer.parseInt(departureData.get("maxSlots").toString());
                 int booked = departureData.get("bookedSlots") != null ? Integer.parseInt(departureData.get("bookedSlots").toString()) : 0;
                 availableSlots = max - booked;
-                bucket.set(availableSlots);
+
+                // Đổi giá trị lưu sang dạng String để StringCodec hiểu được
+                bucket.set(String.valueOf(availableSlots));
             } else {
                 availableSlots = Integer.parseInt(bucketValue.toString());
             }
@@ -130,7 +132,7 @@ public class BookingServiceImpl implements BookingService {
                             .build()).toList();
             booking.setPassengers(passengers);
 
-            bucket.set(availableSlots - passengers.size());
+            bucket.set(String.valueOf(availableSlots - passengers.size()));
 
             Booking saved = bookingRepository.save(booking);
             publishBookingCreatedEvent(saved);
@@ -211,6 +213,48 @@ public class BookingServiceImpl implements BookingService {
             }
         }
         return total;
+    }
+
+    @Override
+    public List<BookingResponse> getBookingsByUserId(Long userId) {
+        List<Booking> bookings = bookingRepository.findByUserIdWithPassengers(userId);
+        return bookings.stream()
+                .map(this::mapToBookingResponse)
+                .toList();
+    }
+
+    @Override
+    public List<BookingResponse> getAllBookings() {
+        List<Booking> bookings = bookingRepository.findAllWithPassengers();
+        return bookings.stream()
+                .map(this::mapToBookingResponse)
+                .toList();
+    }
+
+    private BookingResponse mapToBookingResponse(Booking booking) {
+        Map<String, Object> priceSnapshot = booking.getPriceSnapshot();
+        Map<String, Object> priceConfig = (Map<String, Object>) priceSnapshot.get("priceConfig");
+        List<PassengerDTO> passengerDTOs = booking.getPassengers().stream()
+                .map(p -> PassengerDTO.builder()
+                        .fullName(p.getFullName())
+                        .ageGroup(p.getAgeGroup())
+                        .dob(p.getDob())
+                        .gender(p.getGender())
+                        .idCardNumber(p.getIdCardNumber())
+                        .build())
+                .toList();
+        return BookingResponse.builder()
+                .bookingCode(booking.getBookingCode())
+                .status(booking.getStatus())
+
+                .totalAmount(booking.getTotalAmount())
+                .createdAt(booking.getCreatedAt())
+                .passengers(passengerDTOs) // Đã có tên hành khách
+                .tourTitle(priceSnapshot != null ? (String) priceSnapshot.get("tourTitle") : "N/A")
+                .startDate(priceSnapshot != null ? String.valueOf(priceSnapshot.get("startDate")) : "")
+                .priceDetail(priceSnapshot != null ? (Map<String, Object>) priceSnapshot.get("priceConfig") : null)
+                .userId(booking.getUserId())
+                .build();
     }
 
     // Hàm bổ trợ lấy giá an toàn

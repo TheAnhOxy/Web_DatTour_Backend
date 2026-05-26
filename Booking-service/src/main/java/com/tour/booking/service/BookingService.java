@@ -36,8 +36,9 @@ public interface BookingService {
     // ===== EXISTING METHODS =====
     BookingResponse createBooking(BookingRequest request);
     void cancelBooking(CancelBookingRequest request);
-    
+    List<BookingResponse> getAllBookings();
     // ===== HELPER METHODS (optional) =====
     List<BookingResponse> getBookingsByUserIds(List<Long> userIds);
     Map<Long, BookingResponse> getBookingsByIdsMapped(List<Long> ids);
+    List<BookingResponse> getBookingsByUserId(Long userId);
 }
