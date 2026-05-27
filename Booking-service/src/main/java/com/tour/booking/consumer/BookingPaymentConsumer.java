@@ -10,6 +10,7 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -37,6 +38,18 @@ public class BookingPaymentConsumer {
                 Long bookingId = Long.valueOf(bookingIdRaw.toString());
                 bookingRepository.findById(bookingId).ifPresentOrElse(booking -> {
                     booking.setStatus("CONFIRMED");
+                    BigDecimal paidAmount = resolveAmount(payload);
+                    if (paidAmount != null) {
+                        booking.setPaidAmount(paidAmount);
+                        if (booking.getTotalAmount() == null
+                                || booking.getTotalAmount().compareTo(BigDecimal.ZERO) <= 0) {
+                            booking.setTotalAmount(paidAmount);
+                        }
+                    }
+                    String gateway = payload.getOrDefault("gateway", "").toString();
+                    if (!gateway.isBlank()) {
+                        booking.setPaymentMethod(gateway);
+                    }
                     bookingRepository.save(booking);
                     log.info("=> [Booking] CONFIRMED bookingId={}", bookingId);
                     sendBookingConfirmedEmail(booking, payload);
@@ -50,6 +63,18 @@ public class BookingPaymentConsumer {
                 String bookingCode = txId.startsWith("SEVQR") ? txId.substring(5) : txId;
                 bookingRepository.findByBookingCode(bookingCode).ifPresentOrElse(booking -> {
                     booking.setStatus("CONFIRMED");
+                    BigDecimal paidAmount = resolveAmount(payload);
+                    if (paidAmount != null) {
+                        booking.setPaidAmount(paidAmount);
+                        if (booking.getTotalAmount() == null
+                                || booking.getTotalAmount().compareTo(BigDecimal.ZERO) <= 0) {
+                            booking.setTotalAmount(paidAmount);
+                        }
+                    }
+                    String gateway = payload.getOrDefault("gateway", "").toString();
+                    if (!gateway.isBlank()) {
+                        booking.setPaymentMethod(gateway);
+                    }
                     bookingRepository.save(booking);
                     log.info("=> [Booking] CONFIRMED bookingCode={}", bookingCode);
                     sendBookingConfirmedEmail(booking, payload);
@@ -117,8 +142,13 @@ public class BookingPaymentConsumer {
                 if (d != null) startDate = d.toString();
             }
 
-            String amountStr = booking.getTotalAmount() != null
-                    ? String.format("%,.0f VNĐ", booking.getTotalAmount())
+                BigDecimal emailAmount = booking.getTotalAmount();
+                if (emailAmount == null || emailAmount.compareTo(BigDecimal.ZERO) <= 0) {
+                BigDecimal paidAmount = resolveAmount(paymentPayload);
+                if (paidAmount != null) emailAmount = paidAmount;
+                }
+                String amountStr = emailAmount != null
+                    ? String.format("%,.0f VNĐ", emailAmount)
                     : "N/A";
 
             String gateway = paymentPayload.getOrDefault("gateway", "N/A").toString();
@@ -141,6 +171,16 @@ public class BookingPaymentConsumer {
             log.info("=> [Booking] Đã gửi notification email tới {} cho booking {}", email, booking.getBookingCode());
         } catch (Exception e) {
             log.error("=> [Booking] Lỗi gửi notification email: {}", e.getMessage());
+        }
+    }
+
+    private BigDecimal resolveAmount(Map<String, Object> payload) {
+        Object amountRaw = payload.get("amount");
+        if (amountRaw == null) return null;
+        try {
+            return new BigDecimal(amountRaw.toString());
+        } catch (NumberFormatException ex) {
+            return null;
         }
     }
 }

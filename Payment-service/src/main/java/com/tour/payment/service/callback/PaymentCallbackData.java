@@ -9,4 +9,5 @@ public class PaymentCallbackData {
     private final String transactionId;
     private final String status;
     private final String idempotencyKey;
+    private final java.math.BigDecimal amount;
 }

@@ -47,6 +47,7 @@ public class PaymentController {
         try {
             String transactionId = webhookData.resolveTransactionId();
             String status        = webhookData.resolveStatus();
+            java.math.BigDecimal amount = webhookData.resolveAmount();
 
             if (transactionId == null || transactionId.isBlank()) {
                 log.warn("[SePay Webhook] Bỏ qua: không xác định được transactionId từ payload");
@@ -56,6 +57,9 @@ public class PaymentController {
             Map<String, String> params = new HashMap<>();
             params.put("transactionId", transactionId);
             params.put("status", status);
+            if (amount != null) {
+                params.put("amount", amount.toPlainString());
+            }
             if (webhookData.getIdempotencyKey() != null && !webhookData.getIdempotencyKey().isBlank()) {
                 params.put("idempotencyKey", webhookData.getIdempotencyKey());
             }

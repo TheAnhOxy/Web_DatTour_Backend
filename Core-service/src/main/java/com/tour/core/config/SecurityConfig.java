@@ -47,7 +47,8 @@ public class SecurityConfig {
                                 "/core/tours",
                                 "/core/tours/**",
                                 "/core/departures/**",
-                                "/core/destinations/**"
+                                "/core/destinations/**",
+                                "/core/promotions/validate"
                         ).permitAll()
 
                         // ADMIN
@@ -60,7 +61,8 @@ public class SecurityConfig {
                                 "/core/tours/*",
                                 "/core/departures/**",
                                 "/core/categories/**",
-                                "/core/destinations/**"
+                                "/core/destinations/**",
+                                "/core/promotions/validate"
                         ).permitAll()
 
                         // WISHLIST

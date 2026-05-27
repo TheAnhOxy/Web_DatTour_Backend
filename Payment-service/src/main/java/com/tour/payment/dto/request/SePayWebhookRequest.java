@@ -73,9 +73,16 @@ public class SePayWebhookRequest {
      */
     public String resolveTransactionId() {
         if (content != null && !content.isBlank()) {
-            int idx = content.indexOf("SEVQR");
-            if (idx >= 0) return content.substring(idx).trim();
-            return content.trim(); // không có SEVQR prefix → dùng nguyên
+            String trimmed = content.trim();
+            int idx = trimmed.indexOf("SEVQR");
+            if (idx >= 0) {
+                int end = idx + 5;
+                while (end < trimmed.length() && Character.isLetterOrDigit(trimmed.charAt(end))) {
+                    end++;
+                }
+                return trimmed.substring(idx, end);
+            }
+            return trimmed; // không có SEVQR prefix → dùng nguyên
         }
         return transactionId;
     }
@@ -91,5 +98,14 @@ public class SePayWebhookRequest {
             return "in".equalsIgnoreCase(transferType) ? "SUCCESS" : "FAILED";
         }
         return status != null ? status : "SUCCESS";
+    }
+
+    /**
+     * Trả về số tiền giao dịch (VND) từ SePay webhook.
+     * Fallback về null nếu payload không có transferAmount.
+     */
+    public java.math.BigDecimal resolveAmount() {
+        if (transferAmount == null) return null;
+        return java.math.BigDecimal.valueOf(transferAmount);
     }
 }

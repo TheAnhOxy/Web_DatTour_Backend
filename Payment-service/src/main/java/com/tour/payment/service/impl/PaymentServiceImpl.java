@@ -231,6 +231,9 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setStatus(nextStatus.name());
         if (nextStatus == PaymentStatus.SUCCESS) {
             payment.setPaidAt(LocalDateTime.now());
+            if (callbackData.getAmount() != null) {
+                payment.setAmount(callbackData.getAmount());
+            }
         }
         paymentRepository.save(payment);
 

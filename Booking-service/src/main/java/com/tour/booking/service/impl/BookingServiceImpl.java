@@ -30,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -97,16 +98,19 @@ public class BookingServiceImpl implements BookingService {
 
             // 4. Tính tiền & Tạo Snapshot
             BigDecimal totalAmount = calculateTotal(request.getPassengers(), priceConfig);
+                PromotionCalcResult promoResult = applyPromotion(request.getPromotionCode(), totalAmount);
+                BigDecimal finalTotal = promoResult.finalTotal;
 
             Booking booking = Booking.builder()
                     .bookingCode("BK" + System.nanoTime())
                     .userId(request.getUserId())
                     .departureId(request.getDepartureId())
                     .status("PENDING")
-                    .totalAmount(totalAmount)
+                    .totalAmount(finalTotal)
                     .contactName(request.getContactName())
                     .contactEmail(request.getContactEmail())
                     .contactPhone(request.getContactPhone())
+                    .promotionSnapshot(promoResult.snapshot)
                     .priceSnapshot(Map.of(
                             "tourTitle", tourTitle,
                             "startDate", departureData.get("startDate") != null ? departureData.get("startDate").toString() : "",
@@ -213,6 +217,83 @@ public class BookingServiceImpl implements BookingService {
             }
         }
         return total;
+    }
+
+    private PromotionCalcResult applyPromotion(String rawCode, BigDecimal totalAmount) {
+        if (rawCode == null || rawCode.isBlank()) {
+            return PromotionCalcResult.none(totalAmount);
+        }
+
+        String code = rawCode.trim();
+        ApiResponse promoResponse = coreClient.validatePromotion(code);
+        if (promoResponse == null || promoResponse.getStatus() != 200 || promoResponse.getData() == null) {
+            return PromotionCalcResult.none(totalAmount);
+        }
+
+        Map<String, Object> data = (Map<String, Object>) promoResponse.getData();
+        if (!Boolean.TRUE.equals(toBoolean(data.get("isValid")))) {
+            return PromotionCalcResult.none(totalAmount);
+        }
+
+        BigDecimal discountPercent = toBigDecimal(data.get("discountPercent"));
+        BigDecimal maxDiscount = toBigDecimal(data.get("maxDiscount"));
+        if (discountPercent == null || discountPercent.compareTo(BigDecimal.ZERO) <= 0) {
+            return PromotionCalcResult.none(totalAmount);
+        }
+
+        BigDecimal discountValue = totalAmount
+                .multiply(discountPercent)
+                .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+
+        if (maxDiscount != null && maxDiscount.compareTo(BigDecimal.ZERO) > 0) {
+            discountValue = discountValue.min(maxDiscount);
+        }
+
+        if (discountValue.compareTo(BigDecimal.ZERO) < 0) {
+            discountValue = BigDecimal.ZERO;
+        }
+
+        BigDecimal finalTotal = totalAmount.subtract(discountValue).max(BigDecimal.ZERO);
+
+        Map<String, Object> snapshot = new HashMap<>();
+        snapshot.put("code", data.getOrDefault("code", code));
+        snapshot.put("discountPercent", discountPercent);
+        snapshot.put("maxDiscount", maxDiscount);
+        snapshot.put("discountValue", discountValue);
+        snapshot.put("originalTotal", totalAmount);
+        snapshot.put("finalTotal", finalTotal);
+
+        return new PromotionCalcResult(finalTotal, snapshot);
+    }
+
+    private Boolean toBoolean(Object value) {
+        if (value instanceof Boolean b) return b;
+        if (value instanceof String s) return Boolean.parseBoolean(s);
+        return null;
+    }
+
+    private BigDecimal toBigDecimal(Object value) {
+        if (value == null) return null;
+        if (value instanceof BigDecimal bd) return bd;
+        if (value instanceof Number n) return new BigDecimal(n.toString());
+        if (value instanceof String s && !s.isBlank()) {
+            try { return new BigDecimal(s); } catch (NumberFormatException ignored) { return null; }
+        }
+        return null;
+    }
+
+    private static class PromotionCalcResult {
+        private final BigDecimal finalTotal;
+        private final Map<String, Object> snapshot;
+
+        private PromotionCalcResult(BigDecimal finalTotal, Map<String, Object> snapshot) {
+            this.finalTotal = finalTotal;
+            this.snapshot = snapshot;
+        }
+
+        private static PromotionCalcResult none(BigDecimal totalAmount) {
+            return new PromotionCalcResult(totalAmount, null);
+        }
     }
 
     @Override

@@ -46,14 +46,25 @@ public class SePayPaymentGatewayStrategy implements PaymentGatewayStrategy {
         String transactionId = params.get("transactionId");
         String status = params.get("status");
         String idempotencyKey = params.get("idempotencyKey");
+        String amountRaw = params.get("amount");
         if (transactionId == null || status == null) {
             throw new RuntimeException("Missing callback params for SePay");
+        }
+
+        java.math.BigDecimal amount = null;
+        if (amountRaw != null && !amountRaw.isBlank()) {
+            try {
+                amount = new java.math.BigDecimal(amountRaw);
+            } catch (NumberFormatException ex) {
+                amount = null;
+            }
         }
 
         return PaymentCallbackData.builder()
                 .transactionId(transactionId)
                 .status(status)
                 .idempotencyKey(idempotencyKey == null ? buildIdempotencyKey(transactionId, status) : idempotencyKey)
+            .amount(amount)
                 .build();
     }
 
