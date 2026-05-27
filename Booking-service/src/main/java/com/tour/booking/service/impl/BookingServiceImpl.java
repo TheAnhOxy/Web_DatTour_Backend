@@ -644,4 +644,45 @@ public class BookingServiceImpl implements BookingService {
                         this::mapToResponse
                 ));
     }
+
+    @Override
+    public List<GuestBookingResponseDTO> getGuestBookingsForAdmin() {
+        List<Booking> guestBookings = bookingRepository.findAllGuestBookingsWithPassengers();
+
+        return guestBookings.stream().map(booking -> {
+            // Map danh sách hành khách sang DTO gọn nhẹ
+            List<GuestBookingResponseDTO.GuestPassengerDTO> passengerDTOs = booking.getPassengers().stream()
+                    .map(p -> GuestBookingResponseDTO.GuestPassengerDTO.builder()
+                            .id(p.getId())
+                            .fullName(p.getFullName())
+                            .gender(p.getGender())
+                            .ageGroup(p.getAgeGroup())
+                            .idCardNumber(p.getIdCardNumber())
+                            .passportNumber(p.getPassportNumber())
+                            .dob(p.getDob() != null ? p.getDob().toString() : null)
+                            .build())
+                    .toList();
+
+            // Build cục dữ liệu tổng hợp đầy đủ cho Admin
+            return GuestBookingResponseDTO.builder()
+                    .id(booking.getId())
+                    .bookingCode(booking.getBookingCode())
+                    .departureId(booking.getDepartureId())
+                    .totalAmount(booking.getTotalAmount())
+                    .paidAmount(booking.getPaidAmount())
+                    .status(booking.getStatus())
+                    .paymentMethod(booking.getPaymentMethod())
+                    .paymentDueAt(booking.getPaymentDueAt())
+                    .createdAt(booking.getCreatedAt())
+                    // Thông tin người đặt vãng lai
+                    .contactName(booking.getContactName())
+                    .contactEmail(booking.getContactEmail())
+                    .contactPhone(booking.getContactPhone())
+                    // Snapshot thông tin tour/giá
+                    .priceSnapshot(booking.getPriceSnapshot())
+                    .promotionSnapshot(booking.getPromotionSnapshot())
+                    .passengers(passengerDTOs)
+                    .build();
+        }).toList();
+    }
 }

@@ -4,10 +4,7 @@ import com.tour.identity.client.BookingClient;
 import com.tour.identity.client.PaymentClient;
 import com.tour.identity.dto.event.NotificationEvent;
 import com.tour.identity.dto.request.*;
-import com.tour.identity.dto.response.ApiResponse;
-import com.tour.identity.dto.response.LoginResponse;
-import com.tour.identity.dto.response.UserResponse;
-import com.tour.identity.dto.response.UserWithBookingResponse;
+import com.tour.identity.dto.response.*;
 import com.tour.identity.entity.User;
 import com.tour.identity.repository.UserRepository;
 import com.tour.identity.service.AuthService;
@@ -21,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -238,13 +234,28 @@ class AuthServiceImpl implements AuthService {
             var signedJWT = jwtUtils.verifyToken(request.getToken());
             String jti = signedJWT.getJWTClaimsSet().getJWTID();
 
-            // Check trong Blacklist Redis
+            // 1. Check trong Blacklist Redis
             boolean isBlacklisted = redisTemplate.hasKey("BLACKLIST:" + jti);
+            if (isBlacklisted) {
+                return IntrospectResponse.builder().valid(false).build();
+            }
+
+            // 2. NẾU TOKEN HỢP LỆ: Bóc tiếp dữ liệu từ Claim phục vụ cho Gateway
+            // Lấy userId (Thường tiền bối lưu trong Claim lúc sinh token, ví dụ key là "userId" hoặc "id")
+            Long userId = signedJWT.getJWTClaimsSet().getLongClaim("userId");
+
+            // Lấy danh sách Roles (Thường lưu dạng List chuỗi trong claim "roles" hoặc "scope")
+            List<String> rolesList = signedJWT.getJWTClaimsSet().getStringListClaim("roles");
+            java.util.Set<String> rolesSet = rolesList != null ? new java.util.HashSet<>(rolesList) : java.util.Set.of();
 
             return IntrospectResponse.builder()
-                    .valid(!isBlacklisted)
+                    .valid(true)
+                    .userId(userId)
+                    .roles(rolesSet)
                     .build();
+
         } catch (Exception e) {
+            log.error("Lỗi khi introspect token: {}", e.getMessage());
             return IntrospectResponse.builder().valid(false).build();
         }
     }
@@ -363,14 +374,30 @@ class AuthServiceImpl implements AuthService {
         log.info("=> Data từ Booking Service: {}", bookingRes.getData());
 
         // Jackson luôn coi Key là String khi deserialize vào Map
-        Map<String, Object> bookingMap = (Map<String, Object>) bookingRes.getData();
+//        Map<String, Object> bookingMap = (Map<String, Object>) bookingRes.getData();
+        List<Map<String, Object>> allBookings = (List<Map<String, Object>>) bookingRes.getData();
 
+//        return users.stream().map(user -> {
+//            String userIdStr = String.valueOf(user.getId());
+//
+//            // Lấy list booking, nếu null thì trả về mảng rỗng
+//            Object bookingsObj = (bookingMap != null) ? bookingMap.get(userIdStr) : null;
+//            List<Object> userBookings = (bookingsObj instanceof List) ? (List<Object>) bookingsObj : List.of();
+//
+//            return UserWithBookingResponse.builder()
+//                    .user(user)
+//                    .bookings(userBookings)
+//                    .build();
+//        }).toList();
         return users.stream().map(user -> {
-            String userIdStr = String.valueOf(user.getId());
-
-            // Lấy list booking, nếu null thì trả về mảng rỗng
-            Object bookingsObj = (bookingMap != null) ? bookingMap.get(userIdStr) : null;
-            List<Object> userBookings = (bookingsObj instanceof List) ? (List<Object>) bookingsObj : List.of();
+            // Lọc ra các đơn hàng thuộc về user hiện tại
+            List<Object> userBookings = List.of();
+            if (allBookings != null) {
+                userBookings = allBookings.stream()
+                        .filter(b -> b.get("userId") != null &&
+                                Long.valueOf(b.get("userId").toString()).equals(user.getId()))
+                        .collect(Collectors.toList());
+            }
 
             return UserWithBookingResponse.builder()
                     .user(user)

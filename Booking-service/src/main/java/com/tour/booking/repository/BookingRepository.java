@@ -41,7 +41,11 @@ public interface BookingRepository extends JpaRepository<Booking, Long>,
     List<Booking> findAllByIdsWithPassengers(@Param("ids") List<Long> ids);
 
     // ===== NEW GET API METHODS =====
-
+    @Query("SELECT b FROM Booking b " +
+            "LEFT JOIN FETCH b.passengers " +
+            "WHERE b.userId IS NULL " +
+            "ORDER BY b.createdAt DESC")
+    List<Booking> findAllGuestBookingsWithPassengers();
     // 1. Find by Code with all relationships
     @Query("SELECT DISTINCT b FROM Booking b " +
            "LEFT JOIN FETCH b.passengers " +
