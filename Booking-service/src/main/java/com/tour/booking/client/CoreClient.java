@@ -10,5 +10,5 @@ import java.math.BigDecimal;
 @FeignClient(name = "core-service")
 public interface CoreClient {
     @GetMapping("/core/departures/details/{id}")
-    ApiResponse getDepartureDetails(@PathVariable("id") Long id); // Phải trả về ApiResponse
+    ApiResponse getDepartureDetails(@PathVariable("id") Long id);
 }

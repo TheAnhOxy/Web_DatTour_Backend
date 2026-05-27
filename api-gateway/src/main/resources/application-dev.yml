@@ -34,6 +34,8 @@ spring:
           uri: http://localhost:8084
           predicates:
             - Path=/api/v1/bookings/**, /bookings/**, /v3/api-docs/booking-service
+          filters:
+            - Authentication
 #          filters:
 #            - RewritePath=/bookings/(?<segment>.*), /$\{segment} # thay thế ký tự /product/ thành /
 #            - CustomizeFilter

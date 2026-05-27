@@ -3,6 +3,8 @@ server:
 
 jwt:
   signerKey: my-super-secret-key-that-is-at-least-64-bytes-long-1234567890-abcdef
+  accessTokenValidityInSeconds: 3600
+  refreshTokenValidityInSeconds: 86400
 spring:
   application:
     name: identity-service

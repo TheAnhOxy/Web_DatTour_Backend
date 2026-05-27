@@ -41,4 +41,5 @@ public interface BookingService {
     List<BookingResponse> getBookingsByUserIds(List<Long> userIds);
     Map<Long, BookingResponse> getBookingsByIdsMapped(List<Long> ids);
     List<BookingResponse> getBookingsByUserId(Long userId);
+    List<GuestBookingResponseDTO> getGuestBookingsForAdmin();
 }

@@ -21,16 +21,23 @@ public class JwtUtils {
     @Value("${jwt.signerKey}")
     private String SIGNER_KEY;
 
+    @Value("${jwt.accessTokenValidityInSeconds}")
+    private long accessTokenValidity;
+
+    @Value("${jwt.refreshTokenValidityInSeconds}")
+    private long refreshTokenValidity;
+
     // Token ngắn hạn cho mỗi Request
     public String generateAccessToken(User user) {
-        return buildToken(user, 1, ChronoUnit.HOURS, false);
+        // Thay số 1 giờ cố định bằng biến động truyền vào qua ChronoUnit.SECONDS
+        return buildToken(user, accessTokenValidity, ChronoUnit.SECONDS, false);
     }
 
     // Token dài hạn để đổi lấy Access Token mới
     public String generateRefreshToken(User user) {
-        return buildToken(user, 24, ChronoUnit.HOURS, true);
+        // Thay số 24 giờ cố định bằng biến động truyền vào qua ChronoUnit.SECONDS
+        return buildToken(user, refreshTokenValidity, ChronoUnit.SECONDS, true);
     }
-
     private String buildToken(User user, long duration, ChronoUnit unit, boolean isRefresh) {
         JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
 

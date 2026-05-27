@@ -64,7 +64,7 @@ public class BookingController {
      * GET /api/v1/bookings/{bookingCode}
      * Get booking details by booking code
      */
-    @GetMapping("/{bookingCode}")
+    @GetMapping("/admin/{bookingCode}")
     public ApiResponse getByCode(
             @PathVariable String bookingCode) {
         
@@ -100,7 +100,7 @@ public class BookingController {
      * Query params: status, page, limit
      */
 
-    @GetMapping("/users/{userId}")
+    @GetMapping("/admin/users/{userId}")
     public ApiResponse getByUserId(@PathVariable Long userId) {
         return ApiResponse.builder()
                 .status(200)
@@ -148,7 +148,7 @@ public class BookingController {
                 .build();
     }
 
-    @GetMapping("/all")
+    @GetMapping("/admin/all")
     public ApiResponse getAll() {
         return ApiResponse.builder()
                 .status(200)
@@ -244,6 +244,17 @@ public class BookingController {
         return ApiResponse.builder()
                 .status(200)
                 .data(bookingService.getBookingsByIdsMapped(ids))
+                .build();
+    }
+
+    @GetMapping("/admin/guests")
+    public ApiResponse getGuestBookingsForAdmin() {
+        List<GuestBookingResponseDTO> data = bookingService.getGuestBookingsForAdmin();
+
+        return ApiResponse.builder()
+                .status(HttpStatus.OK.value())
+                .message("Lấy danh sách đơn hàng của khách vãng lai thành công")
+                .data(data)
                 .build();
     }
 }

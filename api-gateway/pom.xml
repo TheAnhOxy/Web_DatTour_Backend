@@ -99,6 +99,12 @@
             <artifactId>reactor-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.nimbusds</groupId>
+            <artifactId>nimbus-jose-jwt</artifactId>
+            <version>10.3.1</version>
+            <scope>compile</scope>
+        </dependency>
 
     </dependencies>
 
