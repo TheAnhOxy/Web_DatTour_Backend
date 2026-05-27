@@ -77,6 +77,21 @@ public class BookingController {
                 .build();
     }
 
+        /**
+         * GET /api/v1/bookings/{bookingCode}
+         * Get booking details by booking code (public).
+         */
+        @GetMapping("/{bookingCode}")
+        public ApiResponse getByCodePublic(@PathVariable String bookingCode) {
+                BookingDetailResponse response = bookingService.getBookingByCode(bookingCode);
+
+                return ApiResponse.builder()
+                                .status(200)
+                                .message("Lấy chi tiết đơn hàng thành công")
+                                .data(response)
+                                .build();
+        }
+
     /**
      * GET /api/v1/bookings/id/{bookingId}
      * Get booking details by booking ID

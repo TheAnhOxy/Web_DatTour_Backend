@@ -24,6 +24,7 @@ public class BookingRequest {
     private Long departureId;
     private List<PassengerDTO> passengers;
     private String note;
+    private String promotionCode;
 
     @NotBlank(message = "Tên người liên hệ không được để trống")
     @Size(max = 100, message = "Tên liên hệ không được vượt quá 100 ký tự")
