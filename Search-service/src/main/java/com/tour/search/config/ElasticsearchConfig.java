@@ -1,5 +1,6 @@
 package com.tour.search.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.convert.ReadingConverter;
@@ -16,11 +17,33 @@ import java.util.Arrays;
 @Configuration
 public class ElasticsearchConfig extends ElasticsearchConfiguration {
 
+    @Value("${spring.elasticsearch.uris:http://localhost:9200}")
+    private String elasticsearchUris;
+
     @Override
     public ClientConfiguration clientConfiguration() {
+        String hostAndPort = extractHostAndPort(elasticsearchUris);
         return ClientConfiguration.builder()
-                .connectedTo("localhost:9200")
+                .connectedTo(hostAndPort)
                 .build();
+    }
+
+    private String extractHostAndPort(String uriValue) {
+        if (uriValue == null || uriValue.isBlank()) {
+            return "localhost:9200";
+        }
+
+        String firstUri = uriValue.split(",")[0].trim();
+        if (firstUri.contains("://")) {
+            java.net.URI parsed = java.net.URI.create(firstUri);
+            String host = parsed.getHost();
+            int port = parsed.getPort() > 0 ? parsed.getPort() : 9200;
+            if (host != null && !host.isBlank()) {
+                return host + ":" + port;
+            }
+        }
+
+        return firstUri;
     }
 
     @Override

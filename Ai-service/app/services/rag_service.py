@@ -11,7 +11,7 @@ class RagService:
         else:
             self.client = None
         # URL của Search-service (Java Spring Boot)
-        self.search_service_url = "http://localhost:8083/search/tours"
+        self.search_service_url = settings.SEARCH_SERVICE_URL
 
     def _build_text_for_record(self, record_data: dict) -> str:
         # Hàm format kết quả JSON từ Java trả về thành dạng Text để nhét vào Prompt
@@ -42,6 +42,9 @@ class RagService:
                 response = await client.get(self.search_service_url, params=params, timeout=5.0)
                 if response.status_code == 200:
                     tours = response.json()
+                    if not isinstance(tours, list):
+                        print(f"Search-service returned non-list response: {tours}")
+                        return mock_travel_assistant.build_tour_context(entities, entities.destination or "")
                     if not tours:
                         return "Không tìm thấy tour nào phù hợp trong hệ thống."
                     
