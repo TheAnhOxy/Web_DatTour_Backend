@@ -28,7 +28,7 @@ spring:
       repositories:
         enabled: true
   elasticsearch: # Nhánh này giữ nguyên cho uris
-    uris: http://localhost:9200
+    uris: ${SPRING_ELASTICSEARCH_URIS:http://localhost:9200}
 #    username: elastic
 #    password: your_password
   autoconfigure:

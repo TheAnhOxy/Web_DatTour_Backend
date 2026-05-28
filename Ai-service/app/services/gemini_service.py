@@ -5,6 +5,30 @@ from typing import List
 from app.models.chat import ChatMessage, ChatResponse, ExtractedEntities
 from app.services.mock_travel_knowledge import mock_travel_assistant
 
+def _clean_schema(schema_dict):
+    """Recursively remove 'additionalProperties' from schema dict to satisfy Gemini API constraints."""
+    if not isinstance(schema_dict, dict):
+        return schema_dict
+    
+    cleaned = dict(schema_dict)
+    if "additionalProperties" in cleaned:
+        del cleaned["additionalProperties"]
+        
+    for k, v in cleaned.items():
+        if isinstance(v, dict):
+            cleaned[k] = _clean_schema(v)
+        elif isinstance(v, list):
+            cleaned[k] = [_clean_schema(item) if isinstance(item, dict) else item for item in v]
+            
+    return cleaned
+
+def get_response_schema(model_class):
+    if hasattr(model_class, "model_json_schema"):
+        schema_dict = model_class.model_json_schema()
+    else:
+        schema_dict = model_class.schema()
+    return _clean_schema(schema_dict)
+
 class GeminiService:
     def __init__(self):
         if settings.GEMINI_API_KEY and settings.AI_MODE.lower() not in {"mock", "test", "demo"}:
@@ -47,7 +71,7 @@ class GeminiService:
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
-                    response_schema=ExtractedEntities,
+                    response_schema=get_response_schema(ExtractedEntities),
                 )
             )
             import json
@@ -141,7 +165,7 @@ class GeminiService:
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
-                    response_schema=ChatResponse,
+                    response_schema=get_response_schema(ChatResponse),
                 )
             )
             

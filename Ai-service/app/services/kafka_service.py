@@ -7,16 +7,24 @@ class KafkaService:
         self.producer = None
 
     async def connect(self):
-        print(f"Connecting to Kafka at {settings.KAFKA_BOOTSTRAP_SERVERS}...")
+        bootstrap_servers = [server.strip() for server in settings.KAFKA_BOOTSTRAP_SERVERS.split(",") if server.strip()]
+        print(f"Connecting to Kafka at {bootstrap_servers}...")
+        producer = None
         try:
-            self.producer = AIOKafkaProducer(
-                bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
+            producer = AIOKafkaProducer(
+                bootstrap_servers=bootstrap_servers,
                 value_serializer=lambda v: json.dumps(v).encode('utf-8')
             )
-            await self.producer.start()
+            await producer.start()
+            self.producer = producer
             print("Connected to Kafka!")
         except Exception as e:
             print(f"Error connecting to Kafka (make sure Docker Kafka is running): {e}")
+            if producer is not None:
+                try:
+                    await producer.stop()
+                except Exception:
+                    pass
             self.producer = None
 
     async def disconnect(self):
