@@ -130,7 +130,7 @@ services:
 
 
   identity-service:
-    build: ./identity-service
+    build: ./Identity-service
     container_name: identity-service
     environment:
       - SPRING_REDIS_HOST=redis
@@ -149,7 +149,7 @@ services:
 
 
   core-service:
-    build: ./core-service
+    build: ./Core-service
     container_name: core-service
     environment:
       - SPRING_DATA_REDIS_HOST=redis
@@ -168,7 +168,7 @@ services:
 
 
   search-service:
-    build: ./search-service
+    build: ./Search-service
     container_name: search-service
     environment:
       - SPRING_ELASTICSEARCH_URIS=http://webtour-elasticsearch:9200
@@ -182,7 +182,7 @@ services:
 
 
   booking-service:
-    build: ./booking-service
+    build: ./Booking-service
     container_name: booking-service
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
@@ -200,7 +200,7 @@ services:
 
 
   payment-service:
-    build: ./payment-service
+    build: ./Payment-service
     container_name: payment-service
     environment:
       - DB_URL=jdbc:postgresql://postgres:5432/payment_db
@@ -214,7 +214,7 @@ services:
 
 
   support-service:
-    build: ./support-service
+    build: ./Support-service
     container_name: support-service
     environment:
       - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
@@ -223,7 +223,7 @@ services:
 
 
   notification-service:
-    build: ./notification-service
+    build: ./Notification-service
     container_name: notification-service
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
