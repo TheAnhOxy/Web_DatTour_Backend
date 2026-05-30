@@ -25,8 +25,8 @@ spring:
 #            - CustomizeFilter
  
         - id: search-service
-#          uri: ${SEARCH_SERVICE_URL:http://localhost:8083}
-          uri: lb://SEARCH-SERVICE
+          uri: ${SEARCH_SERVICE_URL:http://localhost:8083}
+#          uri: lb://SEARCH-SERVICE
           predicates:
             - Path=/search/**
           filters:
@@ -40,8 +40,8 @@ spring:
 #            - RewritePath=/search/(?<segment>.*), /$\{segment}
 #            - CustomizeFilter
         - id: booking-service
-#          uri: ${BOOKING_SERVICE_URL:http://localhost:8084}
-          uri: lb://BOOKING-SERVICE
+          uri: ${BOOKING_SERVICE_URL:http://localhost:8084}
+#          uri: lb://BOOKING-SERVICE
           predicates:
             - Path=/api/v1/bookings/**, /bookings/**
           filters:
