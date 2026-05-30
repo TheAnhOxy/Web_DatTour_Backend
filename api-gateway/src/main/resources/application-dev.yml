@@ -8,7 +8,8 @@ spring:
     gateway:
       routes:
         - id:   identify-service
-          uri: ${IDENTITY_SERVICE_URL:http://localhost:8081}
+#          uri: ${IDENTITY_SERVICE_URL:http://localhost:8081}
+          uri: lb://IDENTITY-SERVICE
           predicates:
             - Path=/auth/**, /v3/api-docs/identify-service
           filters:
@@ -16,7 +17,8 @@ spring:
 #            - RewritePath=/tours/(?<segment>.*), /$\{segment}
 #            - CustomizeFilter
         - id: core-service
-          uri: ${CORE_SERVICE_URL:http://localhost:8082}
+#          uri: ${CORE_SERVICE_URL:http://localhost:8082}
+          uri: lb://core-service
           predicates:
             - Path=/core/**, /v3/api-docs/core-service
 #          filters:
@@ -49,14 +51,16 @@ spring:
 #            - RewritePath=/bookings/(?<segment>.*), /$\{segment}
 #            - CustomizeFilter
         - id: payment-service
-          uri: ${PAYMENT_SERVICE_URL:http://localhost:8085}
+#          uri: ${PAYMENT_SERVICE_URL:http://localhost:8085}
+          uri: lb://PAYMENT-SERVICE
           predicates:
             - Path=/payments/**, /v3/api-docs/payment-service
           filters:
             - name: Authentication
 #            - RewritePath=/payments/(?<segment>.*), /$\{segment} # thay thế ký tự /order/ thành /
         - id: support-service
-          uri: ${SUPPORT_SERVICE_URL:http://localhost:8086}
+#          uri: ${SUPPORT_SERVICE_URL:http://localhost:8086}
+          uri: lb://SUPPORT-SERVICE
           predicates:
             - Path=/supports/**, /v3/api-docs/support-service
 #          filters:
@@ -69,7 +73,8 @@ spring:
 #            - RewritePath=/mail/(?<segment>.*), /$\{segment} # thay thế ký tự /mail/ thành /
 #            - CustomizeFilter
         - id: notification-service
-          uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8087}
+#          uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8087}
+          uri: lb://NOTIFICATION-SERVICE
           predicates:
             - Path=/notification/**, /v3/api-docs/notification-service
 #          filters:
