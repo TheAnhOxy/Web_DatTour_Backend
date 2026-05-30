@@ -17,7 +17,7 @@ spring:
   kafka:
     # Mặc định là localhost cho tiền bối chạy IntelliJ,
     # nhưng khi chạy Docker nó sẽ bị đè bởi biến KAFKA_BOOTSTRAP_SERVERS
-    bootstrap-servers: localhost:29092
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
     producer:
       key-serializer:
         org.apache.kafka.common.serialization.StringSerializer

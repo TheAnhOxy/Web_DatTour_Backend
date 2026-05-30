@@ -11,7 +11,7 @@ class RagService:
         else:
             self.client = None
         # URL của Search-service (Java Spring Boot)
-        self.search_service_url = "http://localhost:8083/search/tours"
+        self.search_service_url = settings.SEARCH_SERVICE_URL
 
     def _build_text_for_record(self, record_data: dict) -> str:
         # Hàm format kết quả JSON từ Java trả về thành dạng Text để nhét vào Prompt
@@ -27,10 +27,6 @@ class RagService:
         Gọi API sang Search Service (Java) dựa trên Entities đã trích xuất.
         Thay vì tự query Elasticsearch, AI Service giao việc này cho Backend Adapter.
         """
-        if settings.AI_MODE.lower() in {"mock", "test", "demo"}:
-            print("Using mock data for RAG because AI_MODE=mock/test/demo...")
-            return mock_travel_assistant.build_tour_context(entities, entities.destination or "")
-
         params = {}
         if entities.destination:
             params['destination'] = entities.destination
@@ -42,6 +38,9 @@ class RagService:
                 response = await client.get(self.search_service_url, params=params, timeout=5.0)
                 if response.status_code == 200:
                     tours = response.json()
+                    if not isinstance(tours, list):
+                        print(f"Search-service returned non-list response: {tours}")
+                        return "Lỗi: Dữ liệu trả về từ Search-service không đúng định dạng (không phải danh sách)."
                     if not tours:
                         return "Không tìm thấy tour nào phù hợp trong hệ thống."
                     
@@ -49,11 +48,9 @@ class RagService:
                     return "\n\n".join(context_chunks)
                 else:
                     print(f"Search-service returned status code {response.status_code}")
+                    return f"Lỗi: Dịch vụ tìm kiếm phản hồi mã lỗi {response.status_code}."
         except Exception as e:
             print(f"Error calling Search-service: {e}")
-            
-        # Fallback Mock data nếu Java Service chưa chạy
-        print("Using fallback mock data for RAG...")
-        return mock_travel_assistant.build_tour_context(entities, entities.destination or "")
+            return f"Lỗi: Không thể kết nối tới Search-service ({e})."
 
 rag_service = RagService()

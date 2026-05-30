@@ -1,5 +1,6 @@
 package com.tour.core.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -56,6 +57,7 @@ public class Tour {
         @ManyToMany
         @JoinTable(name = "tour_destinations", joinColumns = @JoinColumn(name = "tour_id"), inverseJoinColumns = @JoinColumn(name = "destination_id"))
         @org.hibernate.annotations.BatchSize(size = 50)
+        @JsonManagedReference
         private Set<Destination> destinations;
 
         @OneToMany(mappedBy = "tour")

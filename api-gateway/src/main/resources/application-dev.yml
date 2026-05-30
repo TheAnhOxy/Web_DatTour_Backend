@@ -6,9 +6,10 @@ spring:
     add-properties: true
   cloud:
     gateway:
-      routes: # điều hướng request đến service tương ứng thông qua chỉ định trên url
+      routes:
         - id:   identify-service
-          uri: http://localhost:8081
+#          uri: ${IDENTITY_SERVICE_URL:http://localhost:8081}
+          uri: lb://IDENTITY-SERVICE
           predicates:
             - Path=/auth/**, /v3/api-docs/identify-service
           filters:
@@ -16,38 +17,50 @@ spring:
 #            - RewritePath=/tours/(?<segment>.*), /$\{segment}
 #            - CustomizeFilter
         - id: core-service
-          uri: http://localhost:8082
+#          uri: ${CORE_SERVICE_URL:http://localhost:8082}
+          uri: lb://core-service
           predicates:
             - Path=/core/**, /v3/api-docs/core-service
 #          filters:
-#            - RewritePath=/cores/(?<segment>.*), /$\{segment} # thay thế ký tự /account/ thành /
+#            - RewritePath=/cores/(?<segment>.*), /$\{segment}
 #            - CustomizeFilter
-
+ 
         - id: search-service
-          uri: http://localhost:8083
+#          uri: ${SEARCH_SERVICE_URL:http://localhost:8083}
+          uri: lb://SEARCH-SERVICE
           predicates:
             - Path=/search/**, /v3/api-docs/search-service
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 20 #  Sl nap mỗi giây ( 20 req/s)
+                redis-rate-limiter.burstCapacity: 20 #  chứa tối đa  20 req trong 1 giây
+                requested-tokens: 1
+                key-resolver: "#{@ipKeyResolver}"
 #          filters:
-#            - RewritePath=/search/(?<segment>.*), /$\{segment} # thay thế ký tự /mail/ thành /
+#            - RewritePath=/search/(?<segment>.*), /$\{segment}
 #            - CustomizeFilter
         - id: booking-service
-          uri: http://localhost:8084
+#          uri: ${BOOKING_SERVICE_URL:http://localhost:8084}
+          uri: lb://BOOKING-SERVICE
           predicates:
             - Path=/api/v1/bookings/**, /bookings/**, /v3/api-docs/booking-service
           filters:
             - Authentication
 #          filters:
-#            - RewritePath=/bookings/(?<segment>.*), /$\{segment} # thay thế ký tự /product/ thành /
+#            - RewritePath=/bookings/(?<segment>.*), /$\{segment}
 #            - CustomizeFilter
         - id: payment-service
-          uri: http://localhost:8085
+#          uri: ${PAYMENT_SERVICE_URL:http://localhost:8085}
+          uri: lb://PAYMENT-SERVICE
           predicates:
             - Path=/payments/**, /v3/api-docs/payment-service
           filters:
             - name: Authentication
 #            - RewritePath=/payments/(?<segment>.*), /$\{segment} # thay thế ký tự /order/ thành /
         - id: support-service
-          uri: http://localhost:8086
+#          uri: ${SUPPORT_SERVICE_URL:http://localhost:8086}
+          uri: lb://SUPPORT-SERVICE
           predicates:
             - Path=/supports/**, /v3/api-docs/support-service
 #          filters:
@@ -60,12 +73,20 @@ spring:
 #            - RewritePath=/mail/(?<segment>.*), /$\{segment} # thay thế ký tự /mail/ thành /
 #            - CustomizeFilter
         - id: notification-service
-          uri: http://localhost:8087
+#          uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8087}
+          uri: lb://NOTIFICATION-SERVICE
           predicates:
             - Path=/notification/**, /v3/api-docs/notification-service
 #          filters:
 #            - RewritePath=/notification/(?<segment>.*), /$\{segment} # thay thế ký tự /mail/ thành /
 #            - CustomizeFilter
+        - id: ai-service
+          uri: ${AI_SERVICE_URL:http://localhost:8000}
+          predicates:
+            - Path=/ai/**, /v3/api-docs/ai-service
+          filters:
+            - RewritePath=/ai/(?<segment>.*), /api/$\{segment}
+
 
 
 springdoc:
@@ -86,6 +107,8 @@ springdoc:
         name: Booking Service\
       - url: /v3/api-docs/notification-service
         name: Notification Service
+      - url: /v3/api-docs/ai-service
+        name: AI Service
 
 #redis:
 #  host: localhost

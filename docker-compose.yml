@@ -9,9 +9,7 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
-      - ES_JAVA_OPTS=-Xms512m -Xmx512m
-    ports:
-      - "9200:9200"
+      - ES_JAVA_OPTS=-Xms256m -Xmx512m
     networks:
       - gotour-network
 
@@ -36,8 +34,6 @@ services:
     container_name: zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
-    ports:
-      - "2181:2181"
     networks:
       - gotour-network
 
@@ -46,23 +42,18 @@ services:
     container_name: kafka
     depends_on:
       - zookeeper
-    ports:
-      - "9092:9092"   # Cổng nội bộ (cho Docker sau này)
-      - "29092:29092" # Cổng bên ngoài (cho IntelliJ hiện tại)
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       # Lắng nghe trên tất cả các interface của container
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
-      # Quảng bá địa chỉ để Client biết đường mà tìm
-      # PLAINTEXT: dành cho các container trong Docker network (dùng hostname 'kafka')
-      # PLAINTEXT_HOST: dành cho ứng dụng chạy local bên ngoài Docker
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      # Quảng bá địa chỉ dùng hostname 'kafka' cho các container trong Docker network
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      # Tự động tạo topic nếu chưa có (để đỡ lỗi Topic not present)
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_JVM_PERFORMANCE_OPTS: "-Xms256m -Xmx512m"
     networks:
       - gotour-network
 
@@ -73,8 +64,6 @@ services:
   redis:
     image: redis:7-alpine
     container_name: redis
-    ports:
-      - "6379:6379"
     networks:
       - gotour-network
 
@@ -85,8 +74,6 @@ services:
   prometheus:
     image: prom/prometheus
     container_name: prometheus
-    ports:
-      - "9090:9090"
     networks:
       - gotour-network
 
@@ -101,8 +88,6 @@ services:
   zipkin:
     image: openzipkin/zipkin
     container_name: zipkin
-    ports:
-      - "9411:9411"
     networks:
       - gotour-network
 
@@ -115,8 +100,8 @@ services:
     build: ./discovery-service
     image: be-discovery-service-custom
     container_name: discovery-service
-    ports:
-      - "8761:8761"
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
     networks:
       - gotour-network
 
@@ -133,50 +118,62 @@ services:
       - PAYMENT_SERVICE_URL=http://payment-service:8085
       - SUPPORT_SERVICE_URL=http://support-service:8086
       - NOTIFICATION_SERVICE_URL=http://notification-service:8087
+      - AI_SERVICE_URL=http://ai-service:8000
+      - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
     depends_on:
       - identity-service
       - core-service
       - search-service
+      - ai-service
     networks:
       - gotour-network
 
 
   identity-service:
-    build: ./identity-service
+    build: ./Identity-service
     container_name: identity-service
-    ports:
-      - "8081:8081"
     environment:
       - SPRING_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_HOST=redis
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/identity_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
     depends_on:
       - redis
       - kafka
+      - postgres
     networks:
       - gotour-network
 
 
   core-service:
-    build: ./core-service
+    build: ./Core-service
     container_name: core-service
-    ports:
-      - "8082:8082"
     environment:
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/core_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
     depends_on:
       - kafka
+      - postgres
+      - redis
     networks:
       - gotour-network
 
 
   search-service:
-    build: ./search-service
+    build: ./Search-service
     container_name: search-service
-    ports:
-      - "8083:8083"
     environment:
       - SPRING_ELASTICSEARCH_URIS=http://webtour-elasticsearch:9200
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
     depends_on:
       - elasticsearch
       - kafka
@@ -185,47 +182,83 @@ services:
 
 
   booking-service:
-    build: ./booking-service
+    build: ./Booking-service
     container_name: booking-service
-    ports:
-      - "8084:8084"
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - REDIS_HOST=redis
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/booking_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
     depends_on:
       - redis
       - kafka
+      - postgres
     networks:
       - gotour-network
 
 
   payment-service:
-    build: ./payment-service
+    build: ./Payment-service
     container_name: payment-service
-    ports:
-      - "8085:8085"
+    environment:
+      - DB_URL=jdbc:postgresql://postgres:5432/payment_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
+    depends_on:
+      - postgres
     networks:
       - gotour-network
 
 
   support-service:
-    build: ./support-service
+    build: ./Support-service
     container_name: support-service
-    ports:
-      - "8086:8086"
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
     networks:
       - gotour-network
 
 
   notification-service:
-    build: ./notification-service
+    build: ./Notification-service
     container_name: notification-service
-    ports:
-      - "8087:8087"
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/notification_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
     depends_on:
       - kafka
+      - postgres
+    networks:
+      - gotour-network
+
+
+  ai-service:
+    build: ./Ai-service
+    container_name: ai-service
+    environment:
+      - REDIS_HOST=redis
+    depends_on:
+      - redis
+    networks:
+      - gotour-network
+
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: webtour-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-postgres:/docker-entrypoint-initdb.d
     networks:
       - gotour-network
 
@@ -233,3 +266,6 @@ services:
 networks:
   gotour-network:
     driver: bridge
+
+volumes:
+  postgres-data:

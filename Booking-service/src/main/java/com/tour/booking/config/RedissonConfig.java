@@ -11,7 +11,11 @@ public class RedissonConfig {
     @Bean
     public RedissonClient redissonClient() {
         Config config = new Config();
-        config.useSingleServer().setAddress("redis://127.0.0.1:6379");
+        String redisHost = System.getenv("REDIS_HOST");
+        if (redisHost == null) {
+            redisHost = "127.0.0.1";
+        }
+        config.useSingleServer().setAddress("redis://" + redisHost + ":6379");
         // Thêm dòng này
         config.setCodec(new org.redisson.client.codec.StringCodec());
         return Redisson.create(config);
