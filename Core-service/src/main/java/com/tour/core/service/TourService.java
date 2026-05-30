@@ -27,5 +27,7 @@ public interface TourService {
     void delete(Long id);
 
     TourDetailResponse toggleHot(Long id);
+
+    void syncAllToElasticsearch();
 }
 

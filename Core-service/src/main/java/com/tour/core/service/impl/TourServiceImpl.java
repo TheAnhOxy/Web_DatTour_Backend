@@ -460,4 +460,14 @@ public class TourServiceImpl implements TourService {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return (auth != null && auth.isAuthenticated()) ? auth.getName() : "UNKNOWN";
     }
+
+    @Override
+    @Transactional
+    public void syncAllToElasticsearch() {
+        List<Tour> tours = tourRepository.findAll();
+        for (Tour tour : tours) {
+            eventPublisher.publishEvent(tour);
+        }
+        log.info("Triggered bulk synchronization of {} tours to Elasticsearch.", tours.size());
+    }
 }

@@ -176,4 +176,15 @@ public class TourController {
                 .data(tour)
                 .build());
     }
+
+    @PostMapping("/sync")
+    @Operation(summary = "Sync all tours to Elasticsearch")
+    public ResponseEntity<ApiResponse> sync() {
+        tourService.syncAllToElasticsearch();
+        return ResponseEntity.ok(ApiResponse.builder()
+                .status(200)
+                .message("Đồng bộ danh sách tour sang Elasticsearch thành công")
+                .data(null)
+                .build());
+    }
 }
