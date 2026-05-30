@@ -119,12 +119,16 @@ services:
       - SUPPORT_SERVICE_URL=http://support-service:8086
       - NOTIFICATION_SERVICE_URL=http://notification-service:8087
       - AI_SERVICE_URL=http://ai-service:8000
+      - SPRING_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
       - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
     depends_on:
       - identity-service
       - core-service
       - search-service
       - ai-service
+      - redis
     networks:
       - gotour-network
 
