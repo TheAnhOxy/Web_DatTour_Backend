@@ -10,8 +10,9 @@ spring:
         - id:   identify-service
           uri: ${IDENTITY_SERVICE_URL:http://localhost:8081}
           predicates:
-            - Path=/auth/**, /v3/api-docs/identify-service
+            - Path=/api/v1/auth/**, /v3/api-docs/identify-service
           filters:
+            - StripPrefix=2
             - name: Authentication
 #            - RewritePath=/tours/(?<segment>.*), /$\{segment}
 #            - CustomizeFilter

@@ -30,44 +30,44 @@ public class AuthenticationGatewayFilterFactory extends AbstractGatewayFilterFac
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     private static final List<String> PUBLIC_ENDPOINTS = List.of(
-            "/auth/login",
-            "/auth/register",
-            "/auth/introspect",
-            "/auth/reset-password",
-            "/auth/forgot-password",
-            "/auth/verify-otp",
+            "**/auth/login",
+            "**/auth/register",
+            "**/auth/introspect",
+            "**/auth/reset-password",
+            "**/auth/forgot-password",
+            "**/auth/verify-otp",
 
-            "/v3/api-docs/**",
-            "/swagger-ui/**",
-            "/swagger-resources/**",
-            "/core/**",
+            "**/v3/api-docs/**",
+            "**/swagger-ui/**",
+            "**/swagger-resources/**",
+            "**/core/**",
 
             // ===== BOOKING PUBLIC ENDPOINTS =====
 
             // Create / Cancel
-            "/bookings/create",
-            "/bookings/cancel",
+            "**/bookings/create",
+            "**/bookings/cancel",
 
             // User bookings
-            "/bookings/user/**",
+            "**/bookings/user/**",
 
             // Booking details
-            "/bookings/id/**",
+            "**/bookings/id/**",
 
             // Booking passengers / notes / cancellation
-            "/bookings/*/passengers",
-            "/bookings/*/notes",
-            "/bookings/*/cancellation",
+            "**/bookings/*/passengers",
+            "**/bookings/*/notes",
+            "**/bookings/*/cancellation",
 
             // Legacy endpoints
-            "/bookings/by-users",
-            "/bookings/by-ids",
-            "/bookings/batch",
+            "**/bookings/by-users",
+            "**/bookings/by-ids",
+            "**/bookings/batch",
 
             // Payment webhooks
-            "/payments/sepay-webhook",
-            "/payments/stripe-webhook",
-            "/payments/callback"
+            "**/payments/sepay-webhook",
+            "**/payments/stripe-webhook",
+            "**/payments/callback"
     );
     public AuthenticationGatewayFilterFactory(WebClient.Builder webClientBuilder, ObjectMapper objectMapper) {
         super(Config.class);
