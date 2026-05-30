@@ -1,0 +1,30 @@
+name: GoTour Backend CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-verify:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Compile and Package Maven Modules
+      run: mvn -B clean package -DskipTests
+
+    - name: Verify Docker Compose Build
+      run: |
+        # Kiểm tra xem docker-compose và các Dockerfile có build thành công không
+        docker compose build
