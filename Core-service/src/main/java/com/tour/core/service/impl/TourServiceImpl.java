@@ -33,6 +33,7 @@ import org.modelmapper.ModelMapper;
 import org.redisson.api.RedissonClient;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -41,6 +42,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
@@ -61,10 +64,12 @@ public class TourServiceImpl implements TourService {
     private final DestinationRepository destinationRepository;
     private final DepartureRepository departureRepository;
     private final ModelMapper modelMapper;
+    private final ApplicationEventPublisher eventPublisher;
     private final RedissonClient redissonClient;
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final S3StorageService s3StorageService;
     private final PriceConfigService priceConfigService;
+    private static final String TOUR_SYNC_TOPIC = "tour-sync-topic";
 
     // ── Queries ──
 
@@ -124,9 +129,13 @@ public class TourServiceImpl implements TourService {
         }
 
         Tour savedTour = tourRepository.save(buildTourEntity(request));
+        // jpa dong bo id
+        tourRepository.flush();
         uploadAndSaveImages(savedTour, images);
         saveDepartures(savedTour, request.getDepartures());
-        publishKafkaEvent(savedTour);
+        tourRepository.flush();
+//        publishKafkaEvent(savedTour);
+        eventPublisher.publishEvent(savedTour);
 
         log.info("Tạo tour: id={}, slug={} bởi {}", savedTour.getId(), savedTour.getSlug(), getCurrentUser());
         return toDetailResponse(savedTour);
@@ -160,6 +169,7 @@ public class TourServiceImpl implements TourService {
         tour.setIsHot(Boolean.TRUE.equals(request.getIsHot()));
 
         Tour savedTour = tourRepository.save(tour);
+        tourRepository.flush();
         publishKafkaEvent(savedTour);
 
         if (request.getDepartures() != null) {
@@ -249,15 +259,105 @@ public class TourServiceImpl implements TourService {
     }
 
     private void publishKafkaEvent(Tour tour) {
-        TourSearchEvent event = TourSearchEvent.builder()
-                .tourId(tour.getId()).title(tour.getTitle())
-                .destinations(tour.getDestinations().stream().map(Destination::getCityName).toList())
-                .departures(tour.getDepartures() == null ? List.of() : tour.getDepartures().stream()
-                        .map(d -> DepartureEvent.builder().id(d.getId()).startDate(d.getStartDate()).endDate(d.getEndDate()).build())
-                        .toList())
-                .build();
-        kafkaTemplate.send("tour-search-topic", event);
+        try {
+            TourListResponse syncData = this.toListResponse(tour);
+            if (tour.getDestinations() != null) {
+                List<String> destNames = tour.getDestinations().stream()
+                        .map(Destination::getCityName)
+                        .collect(Collectors.toList());
+                // Lưu ý: Nếu trong TourListResponse chưa có trường setDestinations(List<String>),
+                // tiền bối có thể bỏ qua dòng này hoặc đắp thêm 1 field List<String> destinations vào TourListResponse nhé.
+            }
+            kafkaTemplate.send(TOUR_SYNC_TOPIC, String.valueOf(syncData.getId()), syncData)
+                    .whenComplete((result, ex) -> {
+                        if (ex == null) {
+                            log.info("=> [Kafka Producer] Đẩy dữ liệu đồng bộ thành công cho Tour ID: {}", syncData.getId());
+                        } else {
+                            log.error("=> [Kafka Producer] Đẩy dữ liệu đồng bộ thất bại: {}", ex.getMessage());
+                        }
+                    });
+
+        } catch (Exception e) {
+            log.error("=> [Kafka Producer] Lỗi đóng gói dữ liệu sự kiện Tour: {}", e.getMessage());
+        }
     }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleTourAfterCommit(Tour tour) {
+        log.info("=> [JPA Commit Success] Tiến hành bắn đầy đủ dữ liệu cho Tour ID: {}", tour.getId());
+
+        try {
+            // 1. Tìm thông tin Lịch khởi hành gần nhất (Next Departure)
+            Departure nextDeparture = null;
+            if (tour.getDepartures() != null && !tour.getDepartures().isEmpty()) {
+                nextDeparture = tour.getDepartures().stream()
+                        .filter(d -> d.getStartDate() != null)
+                        .min((a, b) -> a.getStartDate().compareTo(b.getStartDate()))
+                        .orElse(tour.getDepartures().get(0));
+            }
+
+            // 2. Tìm ảnh Đại diện (Cover Image) từ danh sách ảnh của Tour
+            String coverImageUrl = null;
+            if (tour.getImages() != null && !tour.getImages().isEmpty()) {
+                coverImageUrl = tour.getImages().stream()
+                        .filter(img -> Boolean.TRUE.equals(img.getIsCover()))
+                        .findFirst()
+                        .or(() -> tour.getImages().stream().findFirst())
+                        .map(TourImage::getImageUrl)
+                        .orElse(null);
+            }
+
+            // 3. Lấy thông tin Vùng miền (Region) từ Điểm đến (Destination) đầu tiên
+            String region = null;
+            if (tour.getDestinations() != null && !tour.getDestinations().isEmpty()) {
+                region = tour.getDestinations().iterator().next().getRegion();
+            }
+
+            // 4. Đóng gói chuẩn chỉ dữ liệu đưa sang Kafka
+            TourSearchEvent event = TourSearchEvent.builder()
+                    .tourId(tour.getId())
+                    .title(tour.getTitle())
+                    .slug(tour.getSlug())
+                    .basePrice(tour.getBasePrice())
+                    .destinations(tour.getDestinations() == null ? List.of() :
+                            tour.getDestinations().stream().map(Destination::getCityName).toList())
+                    .isHot(tour.getIsHot())
+                    .coverImageUrl(coverImageUrl) // 💡 Đã bóc tách từ bảng phụ TourImage
+                    .categoryName(tour.getCategory() != null ? tour.getCategory().getName() : null)
+                    .durationDays(tour.getDurationDays())
+                    .region(region)               // 💡 Đã lấy từ Destination phụ thuộc
+
+                    // 💡 Các trường Departure lấy từ nextDeparture tìm được ở trên
+                    .departureId(nextDeparture != null ? nextDeparture.getId() : null)
+                    .departureStartDate(nextDeparture != null ? nextDeparture.getStartDate() : null)
+                    .pickupName(nextDeparture != null ? nextDeparture.getPickupName() : null)
+                    .pickupAddress(nextDeparture != null ? nextDeparture.getPickupAddress() : null)
+                    .pickupTime(nextDeparture != null ? nextDeparture.getPickupTime() : null)
+
+                    // 💡 Đồng bộ chuẩn kiểu dữ liệu BigDecimal cho rating
+                    .rating(tour.getRating())
+                    .reviewCount(tour.getReviewCount())
+                    .transportationType(tour.getTransportation() != null ? tour.getTransportation().getType() : null)
+                    .build();
+
+            kafkaTemplate.send("tour-sync-topic", String.valueOf(event.getTourId()), event);
+            log.info("=> [Kafka Producer] Phát tán sự kiện thành công cho Tour ID: {}", event.getTourId());
+
+        } catch (Exception e) {
+            log.error("=> [Kafka Producer] Lỗi khi xử lý bóc tách dữ liệu Event: {}", e.getMessage(), e);
+        }
+    }
+
+//    private void publishKafkaEvent(Tour tour) {
+//        TourSearchEvent event = TourSearchEvent.builder()
+//                .tourId(tour.getId()).title(tour.getTitle())
+//                .destinations(tour.getDestinations().stream().map(Destination::getCityName).toList())
+//                .departures(tour.getDepartures() == null ? List.of() : tour.getDepartures().stream()
+//                        .map(d -> DepartureEvent.builder().id(d.getId()).startDate(d.getStartDate()).endDate(d.getEndDate()).build())
+//                        .toList())
+//                .build();
+//        kafkaTemplate.send("tour-search-topic", event);
+//    }
 
     private void saveDepartures(Tour tour, List<DepartureRequest> departureRequests) {
         if (departureRequests == null || departureRequests.isEmpty()) return;

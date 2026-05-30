@@ -9,7 +9,7 @@ spring:
 
   kafka:
     consumer:
-      group-id: search-group-v3 # ĐỔI TÊN GROUP để Kafka bỏ qua các tin nhắn lỗi cũ
+      group-id: search-group
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       # DÙNG ErrorHandlingDeserializer ở đây

@@ -2,10 +2,12 @@ package com.tour.core.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tour.core.dto.request.TourRequest;
+import com.tour.core.dto.request.TourSearchRequest;
 import com.tour.core.dto.response.ApiResponse;
 import com.tour.core.dto.response.TourListResponse;
 import com.tour.core.dto.response.TourDetailResponse;
 import com.tour.core.service.TourService;
+import com.tour.core.service.impl.TourSearchServiceImpl;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -28,6 +30,22 @@ public class TourController {
 
     private final TourService tourService;
     private final ObjectMapper objectMapper;
+    private final TourSearchServiceImpl tourSearchService;
+
+    @PostMapping("/search")
+    public ApiResponse searchTours(
+            @RequestBody TourSearchRequest request,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        List<TourListResponse> data = tourSearchService.searchTours(request, page, size);
+
+        return ApiResponse.builder()
+                .status(200)
+                .message("Tìm kiếm và lọc danh sách tour thành công")
+                .data(data)
+                .build();
+    }
 
     @GetMapping
     @Operation(summary = "Get active tours for customer")
