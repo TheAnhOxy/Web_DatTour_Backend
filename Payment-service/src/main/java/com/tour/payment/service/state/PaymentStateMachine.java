@@ -12,6 +12,7 @@ public class PaymentStateMachine {
 
     public PaymentStateMachine() {
         Map<PaymentEvent, PaymentStatus> pendingTransitions = new EnumMap<>(PaymentEvent.class);
+
         pendingTransitions.put(PaymentEvent.CALLBACK_SUCCESS, PaymentStatus.SUCCESS);
         pendingTransitions.put(PaymentEvent.CALLBACK_FAILED, PaymentStatus.FAILED);
         pendingTransitions.put(PaymentEvent.CANCEL, PaymentStatus.CANCELED);
