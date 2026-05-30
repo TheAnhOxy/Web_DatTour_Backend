@@ -8,7 +8,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 @Configuration
 public class WebClientConfig {
     @Bean
-    @LoadBalanced // <--- QUAN TRỌNG: Giúp giải mã cái tên 'identity-service' thành IP:PORT
+    @LoadBalanced
     public WebClient.Builder webClientBuilder() {
         return WebClient.builder();
     }

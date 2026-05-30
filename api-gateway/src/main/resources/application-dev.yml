@@ -6,7 +6,7 @@ spring:
     add-properties: true
   cloud:
     gateway:
-      routes: # điều hướng request đến service tương ứng thông qua chỉ định trên url
+      routes:
         - id:   identify-service
           uri: ${IDENTITY_SERVICE_URL:http://localhost:8081}
           predicates:
@@ -20,24 +20,33 @@ spring:
           predicates:
             - Path=/core/**, /v3/api-docs/core-service
 #          filters:
-#            - RewritePath=/cores/(?<segment>.*), /$\{segment} # thay thế ký tự /account/ thành /
+#            - RewritePath=/cores/(?<segment>.*), /$\{segment}
 #            - CustomizeFilter
  
         - id: search-service
-          uri: ${SEARCH_SERVICE_URL:http://localhost:8083}
+#          uri: ${SEARCH_SERVICE_URL:http://localhost:8083}
+          uri: lb://SEARCH-SERVICE
           predicates:
             - Path=/search/**, /v3/api-docs/search-service
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 20 #  Sl nap mỗi giây ( 20 req/s)
+                redis-rate-limiter.burstCapacity: 20 #  chứa tối đa  20 req trong 1 giây
+                requested-tokens: 1
+                key-resolver: "#{@ipKeyResolver}"
 #          filters:
-#            - RewritePath=/search/(?<segment>.*), /$\{segment} # thay thế ký tự /mail/ thành /
+#            - RewritePath=/search/(?<segment>.*), /$\{segment}
 #            - CustomizeFilter
         - id: booking-service
-          uri: ${BOOKING_SERVICE_URL:http://localhost:8084}
+#          uri: ${BOOKING_SERVICE_URL:http://localhost:8084}
+          uri: lb://BOOKING-SERVICE
           predicates:
             - Path=/api/v1/bookings/**, /bookings/**, /v3/api-docs/booking-service
           filters:
             - Authentication
 #          filters:
-#            - RewritePath=/bookings/(?<segment>.*), /$\{segment} # thay thế ký tự /product/ thành /
+#            - RewritePath=/bookings/(?<segment>.*), /$\{segment}
 #            - CustomizeFilter
         - id: payment-service
           uri: ${PAYMENT_SERVICE_URL:http://localhost:8085}
