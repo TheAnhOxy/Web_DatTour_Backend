@@ -11,7 +11,7 @@ spring:
 #          uri: ${IDENTITY_SERVICE_URL:http://localhost:8081}
           uri: lb://IDENTITY-SERVICE
           predicates:
-            - Path=/api/v1/auth/**, /v3/api-docs/identify-service
+            - Path=/api/v1/auth/**
           filters:
             - StripPrefix=2
             - name: Authentication
@@ -21,7 +21,7 @@ spring:
 #          uri: ${CORE_SERVICE_URL:http://localhost:8082}
           uri: lb://core-service
           predicates:
-            - Path=/core/**, /v3/api-docs/core-service
+            - Path=/core/**
 #          filters:
 #            - RewritePath=/cores/(?<segment>.*), /$\{segment}
 #            - CustomizeFilter
@@ -30,7 +30,7 @@ spring:
 #          uri: ${SEARCH_SERVICE_URL:http://localhost:8083}
           uri: lb://SEARCH-SERVICE
           predicates:
-            - Path=/search/**, /v3/api-docs/search-service
+            - Path=/search/**
           filters:
             - name: RequestRateLimiter
               args:
@@ -45,7 +45,7 @@ spring:
 #          uri: ${BOOKING_SERVICE_URL:http://localhost:8084}
           uri: lb://BOOKING-SERVICE
           predicates:
-            - Path=/api/v1/bookings/**, /bookings/**, /v3/api-docs/booking-service
+            - Path=/api/v1/bookings/**, /bookings/**
           filters:
             - Authentication
 #          filters:
@@ -55,7 +55,7 @@ spring:
 #          uri: ${PAYMENT_SERVICE_URL:http://localhost:8085}
           uri: lb://PAYMENT-SERVICE
           predicates:
-            - Path=/payments/**, /v3/api-docs/payment-service
+            - Path=/payments/**
           filters:
             - name: Authentication
 #            - RewritePath=/payments/(?<segment>.*), /$\{segment} # thay thế ký tự /order/ thành /
@@ -63,7 +63,7 @@ spring:
 #          uri: ${SUPPORT_SERVICE_URL:http://localhost:8086}
           uri: lb://SUPPORT-SERVICE
           predicates:
-            - Path=/supports/**, /v3/api-docs/support-service
+            - Path=/supports/**
 #          filters:
 #            - RewritePath=/supports/(?<segment>.*), /$\{segment} # thay thế ký tự /order/ thành /
 #        - id: mail-service
@@ -77,16 +77,73 @@ spring:
 #          uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8087}
           uri: lb://NOTIFICATION-SERVICE
           predicates:
-            - Path=/notification/**, /v3/api-docs/notification-service
+            - Path=/notification/**
 #          filters:
 #            - RewritePath=/notification/(?<segment>.*), /$\{segment} # thay thế ký tự /mail/ thành /
 #            - CustomizeFilter
         - id: ai-service
           uri: ${AI_SERVICE_URL:http://localhost:8000}
           predicates:
-            - Path=/ai/**, /v3/api-docs/ai-service
+            - Path=/ai/**
           filters:
             - RewritePath=/ai/(?<segment>.*), /api/$\{segment}
+
+        # ===== SWAGGER API DOCS ROUTING =====
+        - id: identify-service-docs
+          uri: ${IDENTITY_SERVICE_URL:http://localhost:8081}
+          predicates:
+            - Path=/v3/api-docs/identify-service
+          filters:
+            - SetPath=/v3/api-docs
+
+        - id: core-service-docs
+          uri: ${CORE_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/v3/api-docs/core-service
+          filters:
+            - SetPath=/v3/api-docs
+
+        - id: search-service-docs
+          uri: lb://SEARCH-SERVICE
+          predicates:
+            - Path=/v3/api-docs/search-service
+          filters:
+            - SetPath=/v3/api-docs
+
+        - id: booking-service-docs
+          uri: lb://BOOKING-SERVICE
+          predicates:
+            - Path=/v3/api-docs/booking-service
+          filters:
+            - SetPath=/v3/api-docs
+
+        - id: payment-service-docs
+          uri: ${PAYMENT_SERVICE_URL:http://localhost:8085}
+          predicates:
+            - Path=/v3/api-docs/payment-service
+          filters:
+            - SetPath=/v3/api-docs
+
+        - id: support-service-docs
+          uri: ${SUPPORT_SERVICE_URL:http://localhost:8086}
+          predicates:
+            - Path=/v3/api-docs/support-service
+          filters:
+            - SetPath=/v3/api-docs
+
+        - id: notification-service-docs
+          uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8087}
+          predicates:
+            - Path=/v3/api-docs/notification-service
+          filters:
+            - SetPath=/v3/api-docs
+
+        - id: ai-service-docs
+          uri: ${AI_SERVICE_URL:http://localhost:8000}
+          predicates:
+            - Path=/v3/api-docs/ai-service
+          filters:
+            - SetPath=/openapi.json
 
 
 
@@ -105,7 +162,7 @@ springdoc:
       - url: /v3/api-docs/search-service
         name: Search Service
       - url: /v3/api-docs/booking-service
-        name: Booking Service\
+        name: Booking Service
       - url: /v3/api-docs/notification-service
         name: Notification Service
       - url: /v3/api-docs/ai-service
