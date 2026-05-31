@@ -107,6 +107,7 @@ services:
     build: ./discovery-service
     image: be-discovery-service-custom
     container_name: discovery-service
+    restart: always
     environment:
       - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
     networks:
@@ -115,6 +116,7 @@ services:
   api-gateway:
     build: ./api-gateway
     container_name: api-gateway
+    restart: always
     ports:
       - "8080:8080"
     environment:
@@ -144,6 +146,7 @@ services:
   identity-service:
     build: ./Identity-service
     container_name: identity-service
+    restart: always
     environment:
       - SPRING_REDIS_HOST=redis
       - SPRING_DATA_REDIS_HOST=redis
@@ -160,6 +163,7 @@ services:
   core-service:
     build: ./Core-service
     container_name: core-service
+    restart: always
     environment:
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
@@ -176,6 +180,7 @@ services:
   search-service:
     build: ./Search-service
     container_name: search-service
+    restart: always
     environment:
       - SPRING_ELASTICSEARCH_URIS=http://webtour-elasticsearch:9200
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
@@ -191,6 +196,7 @@ services:
   booking-service:
     build: ./Booking-service
     container_name: booking-service
+    restart: always
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - REDIS_HOST=redis
@@ -206,6 +212,7 @@ services:
   payment-service:
     build: ./Payment-service
     container_name: payment-service
+    restart: always
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://discovery-service:8761/eureka/
@@ -219,6 +226,7 @@ services:
   support-service:
     build: ./Support-service
     container_name: support-service
+    restart: always
     environment:
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://discovery-service:8761/eureka/
       - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
@@ -229,6 +237,7 @@ services:
   notification-service:
     build: ./Notification-service
     container_name: notification-service
+    restart: always
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://discovery-service:8761/eureka/
@@ -242,6 +251,7 @@ services:
   ai-service:
     build: ./Ai-service
     container_name: ai-service
+    restart: always
     environment:
       - REDIS_HOST=redis
       - REDIS_URL=redis://redis:6379/0
