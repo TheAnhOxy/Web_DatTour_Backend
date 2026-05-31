@@ -19,6 +19,8 @@ spring:
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
         spring.json.trusted.packages: "*"
+        spring.json.use.type.headers: false
+        spring.json.value.default.type: java.util.HashMap
 
   datasource:
     url: ${DB_URL}
@@ -88,3 +90,12 @@ payment:
     address: "Phạm Văn chiêu, Phường 9, Gò Vấp, Hồ Chí Minh"
     hours: "T2–T7, 8:00–17:30"
     hotline: "1900-xxxx"
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE:http://localhost:8761/eureka/}
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true

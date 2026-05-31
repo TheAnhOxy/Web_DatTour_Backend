@@ -148,15 +148,11 @@ services:
       - SPRING_REDIS_HOST=redis
       - SPRING_DATA_REDIS_HOST=redis
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/identity_db
-      - SPRING_DATASOURCE_USERNAME=postgres
-      - SPRING_DATASOURCE_PASSWORD=postgres
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://discovery-service:8761/eureka/
       - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
     depends_on:
       - redis
       - kafka
-      - postgres
     networks:
       - gotour-network
 
@@ -168,14 +164,10 @@ services:
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/core_db
-      - SPRING_DATASOURCE_USERNAME=postgres
-      - SPRING_DATASOURCE_PASSWORD=postgres
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://discovery-service:8761/eureka/
       - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
     depends_on:
       - kafka
-      - postgres
       - redis
     networks:
       - gotour-network
@@ -202,15 +194,11 @@ services:
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - REDIS_HOST=redis
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/booking_db
-      - SPRING_DATASOURCE_USERNAME=postgres
-      - SPRING_DATASOURCE_PASSWORD=postgres
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://discovery-service:8761/eureka/
       - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
     depends_on:
       - redis
       - kafka
-      - postgres
     networks:
       - gotour-network
 
@@ -219,13 +207,11 @@ services:
     build: ./Payment-service
     container_name: payment-service
     environment:
-      - DB_URL=jdbc:postgresql://postgres:5432/payment_db
-      - DB_USERNAME=postgres
-      - DB_PASSWORD=postgres
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://discovery-service:8761/eureka/
       - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
     depends_on:
-      - postgres
+      - kafka
     networks:
       - gotour-network
 
@@ -245,14 +231,10 @@ services:
     container_name: notification-service
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/notification_db
-      - SPRING_DATASOURCE_USERNAME=postgres
-      - SPRING_DATASOURCE_PASSWORD=postgres
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://discovery-service:8761/eureka/
       - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
     depends_on:
       - kafka
-      - postgres
     networks:
       - gotour-network
 
@@ -262,29 +244,18 @@ services:
     container_name: ai-service
     environment:
       - REDIS_HOST=redis
+      - REDIS_URL=redis://redis:6379/0
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SEARCH_SERVICE_URL=http://search-service:8083/search/tours
     depends_on:
       - redis
+      - kafka
     networks:
       - gotour-network
 
 
-  postgres:
-    image: postgres:15-alpine
-    container_name: webtour-postgres
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=postgres
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-      - ./init-postgres:/docker-entrypoint-initdb.d
-    networks:
-      - gotour-network
-
+  # (webtour-postgres removed as requested)
 
 networks:
   gotour-network:
     driver: bridge
-
-volumes:
-  postgres-data:
