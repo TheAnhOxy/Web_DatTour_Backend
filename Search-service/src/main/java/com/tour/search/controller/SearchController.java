@@ -50,42 +50,42 @@ public class SearchController {
                 .data(result)
                 .build();
     }
-//    @GetMapping("/tours")
-//    public ResponseEntity<?> search(
-//            @RequestParam(required = false) String destination,
-//            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-//            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
-//    ) {
-//        NativeQuery query = NativeQuery.builder()
-//                .withQuery(q -> q.bool(b -> {
-//                    // 1. Tìm theo điểm đến (Mức Tour)
-//                    if (destination != null && !destination.isBlank()) {
-//                        b.must(m -> m.match(mt -> mt.field("destinations").query(destination)));
-//                    }
-//
-//                    // Trong Query Builder
-//                    if (startDate != null || endDate != null) {
-//                        b.must(m -> m.nested(n -> n
-//                                .path("departures")
-//                                .query(nq -> nq.bool(nb -> {
-//                                    // Chỉ cần kiểm tra từng trường, không cần bọc thêm 1 tầng if(startDate != null || endDate != null) nữa
-//                                    if (startDate != null) {
-//                                        String startStr = startDate.atStartOfDay().format(ES_DATE_FORMATTER);
-//                                        nb.must(nm -> nm.range(r -> r.field("departures.startDate").gte(JsonData.of(startStr))));
-//                                    }
-//                                    if (endDate != null) {
-//                                        String endStr = endDate.atTime(LocalTime.MAX).format(ES_DATE_FORMATTER);
-//                                        nb.must(nm -> nm.range(r -> r.field("departures.endDate").lte(JsonData.of(endStr))));
-//                                    }
-//                                    return nb;
-//                                }))
-//                        ));
-//                    }
-//                    return b;
-//                }))
-//                .build();
-//
-//        SearchHits<TourDocument> hits = elasticsearchOperations.search(query, TourDocument.class);
-//        return ResponseEntity.ok(hits.getSearchHits().stream().map(hit -> hit.getContent()).toList());
-//    }
+    @GetMapping("/tours")
+    public ResponseEntity<?> search(
+            @RequestParam(required = false) String destination,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+    ) {
+        NativeQuery query = NativeQuery.builder()
+                .withQuery(q -> q.bool(b -> {
+                    // 1. Tìm theo điểm đến (Mức Tour)
+                    if (destination != null && !destination.isBlank()) {
+                        b.must(m -> m.match(mt -> mt.field("destinations").query(destination)));
+                    }
+
+                    // Trong Query Builder
+                    if (startDate != null || endDate != null) {
+                        b.must(m -> m.nested(n -> n
+                                .path("departures")
+                                .query(nq -> nq.bool(nb -> {
+                                    // Chỉ cần kiểm tra từng trường, không cần bọc thêm 1 tầng if(startDate != null || endDate != null) nữa
+                                    if (startDate != null) {
+                                        String startStr = startDate.atStartOfDay().format(ES_DATE_FORMATTER);
+                                        nb.must(nm -> nm.range(r -> r.field("departures.startDate").gte(JsonData.of(startStr))));
+                                    }
+                                    if (endDate != null) {
+                                        String endStr = endDate.atTime(LocalTime.MAX).format(ES_DATE_FORMATTER);
+                                        nb.must(nm -> nm.range(r -> r.field("departures.endDate").lte(JsonData.of(endStr))));
+                                    }
+                                    return nb;
+                                }))
+                        ));
+                    }
+                    return b;
+                }))
+                .build();
+
+        SearchHits<TourDocument> hits = elasticsearchOperations.search(query, TourDocument.class);
+        return ResponseEntity.ok(hits.getSearchHits().stream().map(hit -> hit.getContent()).toList());
+    }
 }
