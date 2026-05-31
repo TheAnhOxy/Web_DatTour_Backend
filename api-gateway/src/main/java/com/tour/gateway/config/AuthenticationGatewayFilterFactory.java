@@ -45,8 +45,8 @@ public class AuthenticationGatewayFilterFactory extends AbstractGatewayFilterFac
             // ===== BOOKING PUBLIC ENDPOINTS =====
 
             // Create / Cancel
-            "/**/bookings/create",
-            "/**/bookings/cancel",
+//            "**/bookings/create",
+//            "**/bookings/cancel",
 
             // User bookings
             "/**/bookings/user/**",

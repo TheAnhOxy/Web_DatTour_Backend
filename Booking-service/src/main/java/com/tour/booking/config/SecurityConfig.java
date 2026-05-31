@@ -28,6 +28,8 @@ public class SecurityConfig {
                         .requestMatchers("/bookings/admin/**").hasRole("ADMIN")
                         .requestMatchers("/bookings/passenger/**").hasRole("ADMIN")
 
+                        .requestMatchers("/bookings/create").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers("/bookings/cancel").hasAnyRole("USER", "ADMIN")
                         // TẤT CẢ CÁC API CÒN LẠI ĐỀU CHO PHÉP TRUY CẬP TỰ DO (PermitAll)
                         .anyRequest().permitAll()
                 );

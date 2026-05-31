@@ -71,9 +71,14 @@ services:
   # =====================
   # MONITORING
   # =====================
+
   prometheus:
     image: prom/prometheus
     container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
     networks:
       - gotour-network
 
@@ -81,7 +86,9 @@ services:
     image: grafana/grafana
     container_name: grafana
     ports:
-      - "3000:3000"
+      - "3300:3000"
+    depends_on:
+      - prometheus
     networks:
       - gotour-network
 
