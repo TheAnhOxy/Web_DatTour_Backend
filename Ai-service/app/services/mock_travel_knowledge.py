@@ -528,7 +528,7 @@ class MockTravelAssistant:
                     tool_calls = [
                         ToolCall(
                             tool_name="cancel_booking",
-                            arguments={"booking_id": booking_id, "reason": user_message},
+                            arguments={"bookingCode": booking_id, "booking_id": booking_id, "reason": user_message},
                             status="pending",
                         )
                     ]
@@ -536,7 +536,7 @@ class MockTravelAssistant:
                     tool_calls = [
                         ToolCall(
                             tool_name="check_booking_status",
-                            arguments={"booking_id": booking_id},
+                            arguments={"bookingCode": booking_id, "booking_id": booking_id},
                             status="pending",
                         )
                     ]
