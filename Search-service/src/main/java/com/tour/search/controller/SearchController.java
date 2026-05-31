@@ -77,7 +77,12 @@ public class SearchController {
                 }))
                 .build();
 
-        SearchHits<TourIndex> hits = elasticsearchOperations.search(query, TourIndex.class);
-        return ResponseEntity.ok(hits.getSearchHits().stream().map(hit -> hit.getContent()).toList());
+        try {
+            SearchHits<TourIndex> hits = elasticsearchOperations.search(query, TourIndex.class);
+            return ResponseEntity.ok(hits.getSearchHits().stream().map(hit -> hit.getContent()).toList());
+        } catch (org.springframework.data.elasticsearch.NoSuchIndexException e) {
+            log.warn("Elasticsearch index 'tours' not found for endpoint /search/tours: {}", e.getMessage());
+            return ResponseEntity.ok(java.util.Collections.emptyList());
+        }
     }
 }

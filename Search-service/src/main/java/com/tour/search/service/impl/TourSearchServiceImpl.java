@@ -78,7 +78,13 @@ public class TourSearchServiceImpl implements TourSearchService {
                 .withPageable(pageable)
                 .build();
 
-        SearchHits<TourIndex> searchHits = elasticsearchOperations.search(nativeQuery, TourIndex.class);
+        SearchHits<TourIndex> searchHits;
+        try {
+            searchHits = elasticsearchOperations.search(nativeQuery, TourIndex.class);
+        } catch (org.springframework.data.elasticsearch.NoSuchIndexException e) {
+            log.warn("Elasticsearch index 'tours' not found. Returning empty list: {}", e.getMessage());
+            return java.util.Collections.emptyList();
+        }
 
         return searchHits.getSearchHits().stream()
                 .map(SearchHit::getContent)

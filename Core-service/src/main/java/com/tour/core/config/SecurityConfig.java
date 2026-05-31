@@ -52,6 +52,9 @@ public class SecurityConfig {
                                 "/core/destinations/**",
                                 "/core/promotions/validate"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.POST,
+                                "/core/tours/sync"
+                        ).permitAll()
 
                         // ADMIN
                         .requestMatchers(HttpMethod.GET, "/core/tours/admin")
