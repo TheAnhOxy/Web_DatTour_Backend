@@ -1,0 +1,8 @@
+global:
+  scrape_interval: 5s # Cứ đúng 5 giây Prometheus sẽ tự động sang con Spring Boot "hút" dữ liệu 1 lần
+
+scrape_configs:
+  - job_name: 'core-service'
+    metrics_path: '/my-prometheus-metrics' # Đường dẫn Controller thủ công siêu việt của anh em mình
+    static_configs:
+      - targets: ['host.docker.internal:8082'] # Gọi từ trong Docker Container ra máy Local cổng 8082 của tiền bối

@@ -35,11 +35,13 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(request -> request
 
+
                         .requestMatchers(
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**",
-                                "/actuator/**"
+                                "/monitor", "/monitor/**",
+                                "/my-prometheus-metrics"
                         ).permitAll()
 
                         // PUBLIC APIs
@@ -118,6 +120,18 @@ public class SecurityConfig {
                         })
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
+        return http.build();
+    }
+
+    @Bean
+    @org.springframework.core.annotation.Order(org.springframework.core.Ordered.HIGHEST_PRECEDENCE)
+    public SecurityFilterChain actuatorSecurityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/actuator/**", "/actuator") // Bộ lọc này CHỈ áp dụng cho các link actuator
+                .csrf(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests(authorize -> authorize
+                        .anyRequest().permitAll() // Cho phép tất cả không cần token, không đi qua Resource Server
+                );
         return http.build();
     }
 

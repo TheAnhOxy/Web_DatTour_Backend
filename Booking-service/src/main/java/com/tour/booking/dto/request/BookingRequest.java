@@ -2,10 +2,7 @@ package com.tour.booking.dto.request;
 
 import com.tour.booking.dto.PassengerDTO;
 import jakarta.persistence.Column;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,7 +16,7 @@ import java.util.List;
 @Builder
 public class BookingRequest {
 
-
+    @NotNull(message = "ID người dùng không được để trống")
     private Long userId;
     private Long departureId;
     private List<PassengerDTO> passengers;

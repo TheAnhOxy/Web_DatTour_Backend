@@ -47,8 +47,15 @@ spring:
 management:
   endpoints:
     web:
+      base-path: /monitor
       exposure:
         include: '*'
+  metrics:
+    export:
+      prometheus:
+        enabled: true # Cấu hình chuẩn đét cho mọi đời Spring Boot 3.x
+    tags:
+      application: ${spring.application.name}
 
 eureka:
   client:
@@ -61,6 +68,7 @@ eureka:
 
 logging:
   level:
+    org.springframework.boot.actuate: DEBUG
     root: INFO
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG

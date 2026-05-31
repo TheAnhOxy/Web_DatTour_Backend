@@ -7,6 +7,7 @@ import com.tour.booking.dto.request.CancelBookingRequest;
 import com.tour.booking.dto.request.BatchBookingRequest;
 import com.tour.booking.dto.response.*;
 import com.tour.booking.service.BookingService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,7 +26,7 @@ public class BookingController {
     // ===== POST ENDPOINTS =====
 
     @PostMapping("/create")
-    public ApiResponse createBooking(@RequestBody BookingRequest request) {
+    public ApiResponse createBooking(@Valid @RequestBody BookingRequest request) {
         BookingResponse response = bookingService.createBooking(request);
 
         return ApiResponse.builder()
@@ -123,6 +124,35 @@ public class BookingController {
                 .data(bookingService.getBookingsByUserId(userId))
                 .build();
     }
+
+    @GetMapping("/my-booking/{bookingCode}")
+    public ApiResponse getMyBookingByCode(@PathVariable String bookingCode) {
+        // Gọi Service xử lý lấy chi tiết (Tầng service nên check thêm xem đơn này có đúng của user đang đăng nhập không nhé)
+        BookingDetailResponse response = bookingService.getBookingByCode(bookingCode);
+
+        return ApiResponse.builder()
+                .status(200)
+                .message("Tìm kiếm đơn hàng thành công")
+                .data(response)
+                .build();
+    }
+
+        @GetMapping("/my-history")
+        public ApiResponse getMyBookingHistory(
+                @RequestHeader("X-User-Id") Long userId,
+                @RequestParam(required = false) String status,
+                @RequestParam(defaultValue = "0") Integer page,
+                @RequestParam(defaultValue = "10") Integer limit) {
+
+            PaginatedResponse<BookingResponse> response =
+                    bookingService.getBookingsByUserId(userId, status, page, limit);
+
+            return ApiResponse.builder()
+                    .status(200)
+                    .message("Lấy lịch sử đặt tour thành công")
+                    .data(response)
+                    .build();
+        }
 
     @GetMapping("/user/{userId}")
     public ApiResponse getByUserId(

@@ -40,13 +40,13 @@ public class AuthenticationGatewayFilterFactory extends AbstractGatewayFilterFac
             "**/v3/api-docs/**",
             "**/swagger-ui/**",
             "**/swagger-resources/**",
-            "**/core/**",
+            "/core/**",
 
             // ===== BOOKING PUBLIC ENDPOINTS =====
 
             // Create / Cancel
-            "**/bookings/create",
-            "**/bookings/cancel",
+//            "**/bookings/create",
+//            "**/bookings/cancel",
 
             // User bookings
             "**/bookings/user/**",
