@@ -2,6 +2,7 @@ package com.tour.search.controller;
 
 import co.elastic.clients.json.JsonData;
 import com.tour.search.document.TourDocument;
+import com.tour.search.index.TourIndex;
 import com.tour.search.dto.request.TourSearchRequest;
 import com.tour.search.dto.response.ApiResponse;
 import com.tour.search.dto.response.TourListResponse;
@@ -63,29 +64,20 @@ public class SearchController {
                         b.must(m -> m.match(mt -> mt.field("destinations").query(destination)));
                     }
 
-                    // Trong Query Builder
-                    if (startDate != null || endDate != null) {
-                        b.must(m -> m.nested(n -> n
-                                .path("departures")
-                                .query(nq -> nq.bool(nb -> {
-                                    // Chỉ cần kiểm tra từng trường, không cần bọc thêm 1 tầng if(startDate != null || endDate != null) nữa
-                                    if (startDate != null) {
-                                        String startStr = startDate.atStartOfDay().format(ES_DATE_FORMATTER);
-                                        nb.must(nm -> nm.range(r -> r.field("departures.startDate").gte(JsonData.of(startStr))));
-                                    }
-                                    if (endDate != null) {
-                                        String endStr = endDate.atTime(LocalTime.MAX).format(ES_DATE_FORMATTER);
-                                        nb.must(nm -> nm.range(r -> r.field("departures.endDate").lte(JsonData.of(endStr))));
-                                    }
-                                    return nb;
-                                }))
-                        ));
+                    // Trong Query Builder (không dùng nested vì TourIndex lưu trực tiếp departureStartDate)
+                    if (startDate != null) {
+                        String startStr = startDate.atStartOfDay().format(ES_DATE_FORMATTER);
+                        b.must(m -> m.range(r -> r.field("departureStartDate").gte(JsonData.of(startStr))));
+                    }
+                    if (endDate != null) {
+                        String endStr = endDate.atTime(LocalTime.MAX).format(ES_DATE_FORMATTER);
+                        b.must(m -> m.range(r -> r.field("departureStartDate").lte(JsonData.of(endStr))));
                     }
                     return b;
                 }))
                 .build();
 
-        SearchHits<TourDocument> hits = elasticsearchOperations.search(query, TourDocument.class);
+        SearchHits<TourIndex> hits = elasticsearchOperations.search(query, TourIndex.class);
         return ResponseEntity.ok(hits.getSearchHits().stream().map(hit -> hit.getContent()).toList());
     }
 }
