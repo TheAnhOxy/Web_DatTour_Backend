@@ -51,7 +51,7 @@ async def chat_with_bot(request: ChatRequest):
 
         tool = ToolCall(
             tool_name="create_support_ticket",
-            arguments={"booking_id": booking_id, "issue_type": "complaint", "description": user_message},
+            arguments={"bookingCode": booking_id, "booking_id": booking_id, "issue_type": "complaint", "description": user_message},
             status="pending",
         )
 
@@ -83,7 +83,7 @@ async def chat_with_bot(request: ChatRequest):
             intent="complaint",
             sentiment="negative",
             suggested_tours=[],
-            suggested_questions=[SuggestedQuestion(question="Bạn muốn mình liên hệ hỗ trợ ngay không?")],
+            suggested_questions=[SuggestedQuestion(question="Tôi muốn kết nối với nhân viên hỗ trợ ngay")],
             extracted_entities=ExtractedEntities(destination=None, budget=None, days=None, travel_group=None),
             tool_calls=[ToolCall(tool_name=tool.tool_name, arguments=tool.arguments, status="success")],
             requires_human_support=True,
