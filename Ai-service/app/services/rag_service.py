@@ -15,12 +15,20 @@ class RagService:
 
     def _build_text_for_record(self, record_data: dict) -> str:
         # Hàm format kết quả JSON từ Java trả về thành dạng Text để nhét vào Prompt
+        price = record_data.get('basePrice') or record_data.get('price') or 0
+        duration = record_data.get('durationDays') or record_data.get('duration_days') or 0
+        destinations = record_data.get('destinations') or []
+        location = record_data.get('region') or (destinations[0] if destinations else "Việt Nam")
         return (
             f"Thông tin Tour:\n"
             f"  ID: {record_data.get('id')}\n"
             f"  Tên Tour: {record_data.get('title')}\n"
-            f"  Các điểm đến: {', '.join(record_data.get('destinations', []))}\n"
+            f"  Các điểm đến: {', '.join(destinations)}\n"
+            f"  Giá: {price} đ\n"
+            f"  Số ngày: {duration} ngày\n"
+            f"  Địa điểm: {location}\n"
         )
+
 
     async def search_tours_via_adapter(self, entities: ExtractedEntities) -> str:
         """
