@@ -200,8 +200,11 @@ services:
     build: ./Payment-service
     container_name: payment-service
     environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://discovery-service:8761/eureka/
       - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
+    depends_on:
+      - kafka
     networks:
       - gotour-network
 
@@ -234,8 +237,12 @@ services:
     container_name: ai-service
     environment:
       - REDIS_HOST=redis
+      - REDIS_URL=redis://redis:6379/0
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SEARCH_SERVICE_URL=http://search-service:8083/search/tours
     depends_on:
       - redis
+      - kafka
     networks:
       - gotour-network
 
