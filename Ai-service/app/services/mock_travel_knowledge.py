@@ -351,47 +351,51 @@ class MockTravelAssistant:
         if intent == "tour_search":
             if entities and entities.destination:
                 items = [
-                    f"Bạn muốn đi {entities.destination} mấy ngày?",
-                    "Ngân sách dự kiến của bạn là bao nhiêu?",
-                    "Bạn đi với ai: cặp đôi, gia đình hay nhóm bạn?",
+                    f"Tìm tour đi {entities.destination} giá rẻ nhất",
+                    f"Gợi ý tour {entities.destination} 3 ngày 2 đêm",
+                    f"Tour {entities.destination} có gì nổi bật?",
                 ]
             else:
                 items = [
-                    "Bạn thích biển, núi hay city tour?",
-                    "Bạn muốn đi mấy ngày?",
-                    "Ngân sách của bạn khoảng bao nhiêu?",
+                    "Tìm tour du lịch biển mùa này",
+                    "Tìm tour du lịch miền núi khám phá",
+                    "Tìm các tour du lịch ngắn ngày",
                 ]
         elif intent == "tour_comparison":
             items = [
-                "Bạn muốn mình so sánh theo giá hay lịch trình?",
-                "Bạn ưu tiên khách sạn hay trải nghiệm?",
+                "So sánh các tour theo giá tiền",
+                "Nên chọn tour nghỉ dưỡng nào tốt hơn?",
             ]
         elif intent == "booking_support":
             items = [
-                "Bạn cho mình mã booking nhé?",
-                "Bạn muốn kiểm tra, hủy hay đổi lịch?",
+                "Kiểm tra trạng thái đặt tour của tôi",
+                "Hướng dẫn hủy/đổi lịch đặt tour",
+                "Xem lịch sử thanh toán đơn hàng",
             ]
         elif intent == "complaint":
             items = [
-                "Bạn gửi mã booking để mình tra soát nhanh hơn nhé.",
-                "Bạn muốn mình tạo ticket hỗ trợ ngay không?",
+                "Tôi muốn khiếu nại chất lượng dịch vụ",
+                "Kết nối tôi với nhân viên hỗ trợ trực tiếp",
             ]
         elif intent == "recommendation":
             items = [
-                "Bạn thích biển, núi hay nghỉ dưỡng nhẹ nhàng?",
-                "Bạn muốn đi vào tháng nào?",
+                "Gợi ý các tour hot nhất hiện nay",
+                "Có tour nào phù hợp đi với gia đình không?",
+                "Tư vấn địa điểm du lịch tháng này",
             ]
         elif intent == "greeting":
             items = [
-                "Bạn đang muốn tìm tour nghỉ dưỡng, khám phá hay đi chill cuối tuần vậy?",
-                "Bạn có budget hoặc điểm đến nào trong đầu không?",
+                "Tư vấn tour du lịch phù hợp",
+                "Tìm tour giá tốt cuối tuần",
+                "Gợi ý các điểm du lịch khám phá",
             ]
         else:
             items = [
-                "Bạn muốn mình gợi ý theo ngân sách hay số ngày?",
-                "Bạn muốn đi tour nội địa hay quốc tế?",
+                "Gợi ý các tour đi nước ngoài",
+                "Tìm tour du lịch trọn gói",
             ]
         return [SuggestedQuestion(question=item) for item in items[:3]]
+
 
     def _build_reply_from_tours(self, intent: str, entities: ExtractedEntities, user_message: str) -> tuple[str, List[Dict[str, Any]]]:
         tours = self.search_tours(entities, user_message)
